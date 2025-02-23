@@ -1,0 +1,109 @@
+server.js
+
+    Rôle :
+        Point d'entrée du backend.
+        Configure le serveur Express et Socket.IO.
+        Définit les middlewares globaux (comme CORS et JSON parsing).
+        Redirige les requêtes vers les différents fichiers de routes (gameRoutes, questionRoutes).
+
+    Types de fonctions ou de code :
+        Configuration du serveur.
+        Configuration de Socket.IO.
+        Middlewares globaux (logging, CORS).
+        Liaison des routes API.
+        Gestion des événements globaux Socket.IO (connexion/déconnexion).
+
+
+routes/gameRoutes.js
+
+    Rôle :
+        Définit les routes spécifiques aux fonctionnalités de gestion des jeux.
+        Relie les requêtes HTTP aux contrôleurs appropriés.
+
+    Types de fonctions ou de code :
+        Routes Express (par ex. POST /create-game).
+        Événements Socket.IO (en utilisant io).
+
+
+controllers/gameController.js
+
+    Rôle :
+        Contient la logique métier pour la gestion des jeux (création, rejoindre une partie, gestion des sockets).
+
+    Types de fonctions ou de code :
+        Fonctions pour les requêtes HTTP :
+            createGame : Crée une nouvelle partie et la sauvegarde dans Redis.
+            joinGame : Permet à un joueur de rejoindre une partie existante.
+        Fonctions pour les événements Socket.IO :
+            handleSocketEvents : Gère les événements en temps réel comme joinRoom, playerReady, etc.
+
+
+
+ main.dart
+
+    Rôle :
+        Point d'entrée de l'application Flutter.
+        Initialise l'application et définit l'écran d'accueil.
+
+    Types de fonctions ou de code :
+        Configuration de l'application Flutter.
+        Navigation vers l'écran principal.
+
+
+
+screens/home_screen.dart
+
+    Rôle :
+        Écran d'accueil permettant au joueur de créer ou de rejoindre une partie.
+
+    Types de fonctions ou de code :
+        Champs pour entrer le nom du joueur et le code de la partie.
+        Boutons pour créer ou rejoindre une partie.
+        Appels aux services API pour créer/rejoindre une partie.
+
+
+
+screens/lobby_screen.dart
+
+    Rôle :
+        Affiche les joueurs présents dans la partie et leur état prêt/non-prêt.
+        Permet à l'hôte de démarrer la partie.
+
+    Types de fonctions ou de code :
+        Événements Socket.IO pour afficher les joueurs en temps réel.
+        Checkbox pour définir le statut prêt/non-prêt d'un joueur.
+        Bouton pour démarrer la partie (pour l'hôte).
+
+
+
+screens/game_screen.dart
+
+    Rôle :
+        Écran principal du jeu une fois qu'il a démarré.
+
+    Types de fonctions ou de code :
+        Logique du jeu.
+        Affichage des questions ou des actions du jeu.
+
+
+
+
+services/api_service.dart
+
+    Rôle :
+        Gère les requêtes HTTP vers le backend.
+
+    Types de fonctions ou de code :
+        Méthodes pour interagir avec les routes du backend (par ex. createGame, joinGame).
+
+
+
+
+services/game_service.dart
+
+    Rôle :
+        Gère la connexion et les événements Socket.IO.
+
+    Types de fonctions ou de code :
+        Connexion au serveur Socket.IO.
+        Émission et écoute d'événements en temps réel (par ex. joinRoom, playerReady).
