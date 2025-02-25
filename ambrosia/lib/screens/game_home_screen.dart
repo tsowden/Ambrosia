@@ -1,4 +1,5 @@
 // lib/screens/game_home_screen.dart
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -29,34 +30,24 @@ class GameHomeScreen extends StatefulWidget {
 }
 
 class _GameHomeScreenState extends State<GameHomeScreen> {
-  // ----------------------------------------------------
-  // BOTTOM NAV
-  // ----------------------------------------------------
-  int _currentIndex = 0; // 0 => Game, 1 => Inventory, 2 => Quest, 3 => Quit
+  // Bottom navigation index (Game, Inventory, Quest, Quit)
+  int _currentIndex = 0;
 
-  // ----------------------------------------------------
-  // ÉTATS DU TOUR / JOUEUR
-  // ----------------------------------------------------
+  // Etat du tour et du joueur
   String _turnState = 'movement';
   bool _isPlayerActive = false;
 
-  // ----------------------------------------------------
-  // INFOS PERSO (baies, rang, avatar, etc.)
-  // ----------------------------------------------------
+  // Infos perso
   int _myBerries = 0;
   int _myRank = 1;
   int _totalPlayers = 1;
   String? _myAvatarBase64;
 
-  // ----------------------------------------------------
-  // INFOS DU JOUEUR ACTIF
-  // ----------------------------------------------------
+  // Infos joueur actif
   String? _activePlayerName;
   String? _activePlayerAvatar;
 
-  // ----------------------------------------------------
-  // CARTE PIOCHÉE
-  // ----------------------------------------------------
+  // Infos de la carte piochée (carte courante)
   String? _cardName;
   String? _cardImage;
   String? _cardDescription;
@@ -64,9 +55,7 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
   List<String> _betOptions = [];
   String? _majorityVote;
 
-  // ----------------------------------------------------
-  // QUIZ
-  // ----------------------------------------------------
+  // Quiz
   bool _isQuizInProgress = false;
   List<String> _quizThemes = [];
   int? _quizCurrentIndex;
@@ -79,74 +68,75 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
   int _quizCorrectAnswers = 0;
   int _quizTotalQuestions = 0;
   int _quizEarnedBerries = 0;
-  Timer? _quizTimer;
-  int _timeLeft = 10; // on veut 10 secondes
 
-  // ----------------------------------------------------
-  // MOUVEMENTS POSSIBLES
-  // ----------------------------------------------------
+  // Mouvements possibles (fourni par le back)
   Map<String, bool> _validMoves = {
     'canMoveForward': false,
     'canMoveLeft': false,
     'canMoveRight': false,
   };
 
-  // ----------------------------------------------------
-  // VARIABLES POUR POSITION/ORIENTATION + SNIPPET
-  // ----------------------------------------------------
+  // Map complète sous forme de liste d'objets (chaque cellule possède ses propriétés)
+  List<List<Map<String, dynamic>>> _fullMapObjects = [];
   int _playerX = 0;
   int _playerY = 0;
-  String _playerOrientation = 'south'; // ou n'importe quelle valeur par défaut
-  Map<String,int> _localMapSnippet = {
-    'me': -1,
-    'f1': -1,
-    'f2': -1,
-    'left': -1,
-    'right': -1,
-  };
+  String _playerOrientation = 'south';
 
-  // ----------------------------------------------------
-  // GESTION DES MESSAGES ÉPHÉMÈRES (comme l'ancien code)
-  // ----------------------------------------------------
+  // Messages éphémères
   List<bool> _slotsOccupied = [false, false, false, false];
   Map<String, String> _playerMessages = {};
   double _messageOpacity = 0.0;
 
+  // Inventaire initial
   List<Map<String, dynamic>> _initialInventory = [];
+
+  // Lock pour empêcher plusieurs déplacements simultanés
+  bool _moveLocked = false;
+  Timer? _moveLockTimer;
 
   @override
   void initState() {
     super.initState();
-    widget.gameService.connectToGame(widget.gameId);
 
-    // On configure nos listeners
     _setupSocketListeners();
-
-    // On traite les données initiales
     _handleInitialData(widget.initialData);
+
+    widget.gameService.onStartGame((data) {
+      if (data.containsKey('maze')) {
+        final rawMaze = data['maze'];
+        if (rawMaze is List) {
+          final converted = rawMaze.map((row) {
+            if (row is List) {
+              return row.map((cell) {
+                if (cell is Map) return Map<String, dynamic>.from(cell);
+                return <String, dynamic>{};
+              }).toList();
+            }
+            return <Map<String, dynamic>>[];
+          }).toList();
+          setState(() {
+            _fullMapObjects = converted.cast<List<Map<String, dynamic>>>();
+          });
+        }
+      }
+      _resetForNewTurn(data);
+    });
+
+    widget.gameService.connectToGame(widget.gameId);
   }
 
-  // ----------------------------------------------------
-  // 1) RESET quand un nouveau tour commence
-  //    (Comme dans le code "old" qui appelait _handleNewTurn)
-  // ----------------------------------------------------
   void _resetForNewTurn(Map<String, dynamic> data) {
     setState(() {
-      // Récupère le joueur actif
       _activePlayerName = data['activePlayerName'];
       _turnState = data['turnState'] ?? 'movement';
-      _isPlayerActive = (_activePlayerName?.trim().toLowerCase() ==
-                         widget.playerName.trim().toLowerCase());
-
-      // Comme dans l'ancien code: on reset
+      _isPlayerActive =
+          (_activePlayerName?.trim().toLowerCase() == widget.playerName.trim().toLowerCase());
       _cardName = null;
       _cardImage = null;
       _cardDescription = null;
       _cardCategory = null;
       _betOptions = [];
       _majorityVote = null;
-
-      // Quiz
       _isQuizInProgress = false;
       _quizThemes = [];
       _quizCurrentIndex = null;
@@ -159,152 +149,141 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
       _quizCorrectAnswers = 0;
       _quizTotalQuestions = 0;
       _quizEarnedBerries = 0;
+      // On réinitialise le lock
+      _moveLocked = false;
+    });
 
-      // Si c'est mon tour et qu'on est en phase 'movement', je récupère mes moves
-      if (_isPlayerActive && _turnState == 'movement') {
-        widget.gameService.getValidMoves(widget.gameId, widget.playerId, (moves) {
-          setState(() {
-            _validMoves = moves;
-          });
+    if (_isPlayerActive && _turnState == 'movement') {
+      widget.gameService.getValidMoves(widget.gameId, widget.playerId, (moves) {
+        setState(() {
+          _validMoves = moves;
         });
-      }
+      });
+      // On verrouille les déplacements pendant 3 secondes
+      _setMoveLockFor(const Duration(seconds: 3));
+    }
+  }
+
+  void _setMoveLockFor(Duration duration) {
+    _moveLockTimer?.cancel();
+    setState(() {
+      _moveLocked = true;
+    });
+    _moveLockTimer = Timer(duration, () {
+      setState(() {
+        _moveLocked = false;
+      });
     });
   }
 
-  // ----------------------------------------------------
-  // 2) TRAITEMENT DES DONNÉES INITIALES
-  // ----------------------------------------------------
   void _handleInitialData(Map<String, dynamic> data) {
-    // Similaire à l'ancien _handleNewTurn
-    // + mise à jour de mes stats / rank
     final playersData = data['players'] ?? [];
     if (playersData is List) {
       _totalPlayers = playersData.length;
-
-      final me = playersData.firstWhere(
-        (p) => p['playerId'] == widget.playerId,
-        orElse: () => null,
-      );
+      final me = playersData.firstWhere((p) => p['playerId'] == widget.playerId, orElse: () => null);
       if (me != null) {
         _myBerries = me['berries'] ?? 0;
         _myRank = me['rank'] ?? 1;
         _myAvatarBase64 = me['avatarBase64'] ?? '';
         _initialInventory = List<Map<String, dynamic>>.from(me['inventory'] ?? []);
+        if (me['position'] != null) {
+          _playerX = me['position']['x'];
+          _playerY = me['position']['y'];
+        }
+        if (me['orientation'] is String) {
+          _playerOrientation = me['orientation'];
+        }
       }
     }
-    // On fait comme si c'était un "nouveau tour" => on reset tout
+    if (data.containsKey('maze')) {
+      final rawMaze = data['maze'];
+      if (rawMaze is List) {
+        final converted = rawMaze.map((row) {
+          if (row is List) {
+            return row.map((cell) {
+              if (cell is Map) return Map<String, dynamic>.from(cell);
+              return <String, dynamic>{};
+            }).toList();
+          }
+          return <Map<String, dynamic>>[];
+        }).toList();
+        setState(() {
+          _fullMapObjects = converted.cast<List<Map<String, dynamic>>>();
+        });
+      }
+    }
     _resetForNewTurn(data);
   }
 
-  // ----------------------------------------------------
-  // 3) SOCKET LISTENERS
-  // ----------------------------------------------------
   void _setupSocketListeners() {
     final gs = widget.gameService;
 
-    // a) onGameInfos => mise à jour de la liste de joueurs
     gs.onGameInfos((data) {
       final playersData = data['players'] ?? [];
       if (playersData is List) {
         _totalPlayers = playersData.length;
-        final me = playersData.firstWhere(
-          (p) => p['playerId'] == widget.playerId,
-          orElse: () => null,
-        );
+        final me = playersData.firstWhere((p) => p['playerId'] == widget.playerId, orElse: () => null);
         if (me != null) {
           _myBerries = me['berries'] ?? 0;
           _myRank = me['rank'] ?? 1;
           _myAvatarBase64 = me['avatarBase64'] ?? '';
-        }
-
-        final activeName = data['activePlayerName'] as String?;
-        _activePlayerName = activeName;
-        _isPlayerActive = (activeName?.trim().toLowerCase() ==
-                           widget.playerName.trim().toLowerCase());
-
-        // avatar
-        String? activeAvatar;
-        if (activeName != null) {
-          final activePlayerData = playersData.firstWhere(
-            (p) => p['playerName'] == activeName,
-            orElse: () => null,
-          );
-          if (activePlayerData != null) {
-            activeAvatar = activePlayerData['avatarBase64'] ?? '';
+          if (me['position'] != null) {
+            _playerX = me['position']['x'] ?? _playerX;
+            _playerY = me['position']['y'] ?? _playerY;
           }
         }
-        _activePlayerAvatar = activeAvatar;
+        final activeName = data['activePlayerName'] as String?;
+        _activePlayerName = activeName;
+        _isPlayerActive =
+            (activeName?.trim().toLowerCase() == widget.playerName.trim().toLowerCase());
       }
       setState(() {});
     });
 
     gs.onPositionUpdate((data) {
-    // data = { playerId, position:{x,y}, orientation:"...", localMapSnippet: {...} }
-    setState(() {
-      if (data['position'] != null) {
-        _playerX = data['position']['x'] ?? 0;
-        _playerY = data['position']['y'] ?? 0;
-      }
-      if (data['orientation'] != null) {
-        _playerOrientation = data['orientation'];
-      }
-      if (data['localMapSnippet'] != null) {
-        _localMapSnippet = Map<String,int>.from(data['localMapSnippet']);
-      }
-      print("Front: onPositionUpdate => data=$data");  
-    }
-    );
-  });
+      setState(() {
+        if (data['position'] != null) {
+          _playerX = data['position']['x'] ?? _playerX;
+          _playerY = data['position']['y'] ?? _playerY;
+        }
+        if (data['orientation'] != null) {
+          _playerOrientation = data['orientation'];
+        }
+        // Le déverrouillage est géré par le Timer de _setMoveLockFor
+      });
+    });
 
-    // b) onTurnStarted
     gs.onTurnStarted((data) {
-      // Comme dans l'ancien code, on reset tout à chaque début de tour
       _resetForNewTurn(data);
     });
-
-    // c) onActivePlayerChanged
     gs.onActivePlayerChanged((data) {
-      // Pareil : reset
       _resetForNewTurn(data);
     });
-
-    // d) onCardDrawn
     gs.onCardDrawn((data) {
       setState(() {
-        // Mémorise la carte
         _activePlayerName = data['activePlayerName'];
-        _isPlayerActive = (_activePlayerName?.trim().toLowerCase() ==
-                           widget.playerName.trim().toLowerCase());
-
+        _isPlayerActive =
+            (_activePlayerName?.trim().toLowerCase() == widget.playerName.trim().toLowerCase());
         _cardName = data['cardName'];
         _cardImage = data['cardImage'];
         _cardCategory = data['cardCategory'];
         _cardDescription = _isPlayerActive
             ? data['cardDescription']
             : data['cardDescriptionPassive'];
-
         _turnState = data['turnState'] ?? _turnState;
-
-        // BetOptions
         final rawBetOptions = data['betOptions'];
         if (rawBetOptions is List) {
           _betOptions = rawBetOptions.map((e) => e.toString()).toList();
         } else {
           _betOptions = [];
         }
-
-        // Quiz
         if (_cardCategory == 'Quiz') {
           final rawTheme = data['cardTheme'];
           if (rawTheme is String) {
-            // si c'est une string (ex: "Explorers;Geography")
-            if (rawTheme.isNotEmpty) {
-              _quizThemes = rawTheme.split(';').map((s) => s.trim()).toList();
-            } else {
-              _quizThemes = [];
-            }
+            _quizThemes = rawTheme.isNotEmpty
+                ? rawTheme.split(';').map((s) => s.trim()).toList()
+                : [];
           } else if (rawTheme is List) {
-            // si c'est une liste (ex: ["Explorers","Geography"])
             _quizThemes = rawTheme.map((e) => e.toString().trim()).toList();
           } else {
             _quizThemes = [];
@@ -314,49 +293,38 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         }
       });
     });
-
-    // e) onTurnStateChanged
     gs.onTurnStateChanged((data) {
       setState(() {
         _turnState = data['turnState'] ?? _turnState;
-        final pid = data['playerId'];
-        if (_turnState == 'drawStep' && pid == widget.playerId) {
-          print("Front: It's my turn to draw a card => calling playerDrawCard()");
-          widget.gameService.playerDrawCard(widget.gameId, widget.playerId);
-        }
         final rawBetOptions = data['betOptions'];
         if (rawBetOptions is List) {
           _betOptions = rawBetOptions.map((e) => e.toString()).toList();
         }
         if (data.containsKey('majorityVote')) {
           _majorityVote = data['majorityVote'];
-          gs.majorityVote = _majorityVote;
+          gs.majorityVote = data['majorityVote'];
         }
       });
     });
-
-    // f) Valid moves
     gs.onValidMovesReceived((moves) {
       setState(() {
         _validMoves = moves;
       });
     });
-
-    // g) Challenge => onBetPlaced, onChallengeResult, onChallengeVotesUpdated
     gs.onBetPlaced((data) {
       if (_isPlayerActive) {
         final bet = data['bet'];
-        final playerName = data['playerName'];
+        final pName = data['playerName'];
         final idx = _betOptions.indexOf(bet);
         String msg;
         if (idx == 0) {
-          msg = "$playerName doesn't believe in you at all.";
+          msg = "$pName doesn't believe in you at all.";
         } else if (idx == _betOptions.length - 1) {
-          msg = "$playerName bets everything on you!";
+          msg = "$pName bets everything on you!";
         } else {
-          msg = "$playerName believes in you averagely.";
+          msg = "$pName believes in you averagely.";
         }
-        _showTransientMessage(playerName, msg);
+        _showTransientMessage(pName, msg);
       }
     });
     gs.onChallengeResult((data) {
@@ -368,9 +336,8 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         if (data['rewards'] != null) {
           final rewards = data['rewards'] as List<dynamic>;
           final me = rewards.firstWhere(
-            (r) => r['playerName'] == widget.playerName,
-            orElse: () => null,
-          );
+              (r) => r['playerName'] == widget.playerName,
+              orElse: () => null);
           if (me != null && me['berries'] != null) {
             _myBerries = me['berries'];
           }
@@ -386,8 +353,6 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         }
       });
     });
-
-    // h) Quiz => onQuizStarted, onQuizQuestion, onQuizAnswerResult, onQuizEnd
     gs.onQuizStarted((data) {
       setState(() {
         _isQuizInProgress = true;
@@ -401,7 +366,6 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         _quizCurrentImage = null;
       });
     });
-
     gs.onQuizQuestion((data) {
       setState(() {
         _quizCurrentIndex = data['questionIndex'];
@@ -413,14 +377,12 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         _quizCurrentImage = data['questionImage'];
       });
     });
-
     gs.onQuizAnswerResult((data) {
       setState(() {
         _quizCorrectAnswer = data['correctAnswer'];
         _quizWasAnswerCorrect = data['isCorrect'];
       });
     });
-
     gs.onQuizEnd((data) {
       setState(() {
         _quizCorrectAnswers = data['correctAnswers'] ?? 0;
@@ -436,21 +398,14 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
     });
   }
 
-  // ----------------------------------------------------
-  // MESSAGES ÉPHÉMÈRES
-  // ----------------------------------------------------
   void _showTransientMessage(String playerName, String message) {
     final freeSlot = _slotsOccupied.indexWhere((occupied) => !occupied);
-    if (freeSlot == -1) {
-      print("DEBUG: Pas de slot libre pour afficher un message ephemeral");
-      return;
-    }
+    if (freeSlot == -1) return;
     setState(() {
       _slotsOccupied[freeSlot] = true;
       _playerMessages[playerName] = message;
       _messageOpacity = 1.0;
     });
-
     Future.delayed(const Duration(seconds: 1), () {
       if (!mounted) return;
       setState(() => _messageOpacity = 0.0);
@@ -490,11 +445,40 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
       }
       return const SizedBox();
     });
+
   }
 
-  // ----------------------------------------------------
-  // 4) BOTTOM NAV
-  // ----------------------------------------------------
+  // Ajout d'une commande de téléportation pour tests
+  void _showTeleportDialog() {
+    final TextEditingController _controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Teleport Test"),
+          content: TextField(
+            controller: _controller,
+            decoration: const InputDecoration(hintText: "Enter coordinate (e.g. A1)"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                String coord = _controller.text.trim().toUpperCase();
+                widget.gameService.teleportPlayer(widget.gameId, widget.playerId, coord);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text("Teleport"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _onNavItemTapped(int index) {
     if (index == 3) {
       _showQuitDialog();
@@ -532,21 +516,16 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
     );
   }
 
-  // ----------------------------------------------------
-  // 5) BUILD
-  // ----------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          // a) GameScreen en fond
           GameScreen(
             gameId: widget.gameId,
             playerName: widget.playerName,
             playerId: widget.playerId,
             gameService: widget.gameService,
-
             turnState: _turnState,
             isPlayerActive: _isPlayerActive,
             myBerries: _myBerries,
@@ -555,14 +534,12 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
             myAvatarBase64: _myAvatarBase64,
             activePlayerAvatar: _activePlayerAvatar,
             activePlayerName: _activePlayerName,
-
             cardName: _cardName,
             cardImage: _cardImage,
             cardDescription: _cardDescription,
             cardCategory: _cardCategory,
             betOptions: _betOptions,
             majorityVote: _majorityVote,
-
             isQuizInProgress: _isQuizInProgress,
             quizThemes: _quizThemes,
             quizCurrentIndex: _quizCurrentIndex,
@@ -579,10 +556,8 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
             playerX: _playerX,
             playerY: _playerY,
             playerOrientation: _playerOrientation,
-            localMapSnippet: _localMapSnippet,
+            fullMapObjects: _fullMapObjects,
           ),
-
-          // b) Inventory ou Quest si _currentIndex = 1 ou 2
           if (_currentIndex == 1)
             InventoryScreen(
               gameId: widget.gameId,
@@ -596,8 +571,6 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
               playerId: widget.playerId,
               gameService: widget.gameService,
             ),
-
-          // c) Messages éphémères au-dessus
           Positioned(
             bottom: 80,
             left: 0,
@@ -607,6 +580,10 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showTeleportDialog,
+        child: const Icon(Icons.send),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

@@ -1,222 +1,208 @@
 // lib/widgets/dungeon_view.dart
 
+import 'dart:math';
 import 'package:flutter/material.dart';
-import '../styles/app_theme.dart';
 
-/// Représente un widget "9x9" affichant la portion du donjon autour du joueur.
-/// - [mapBool] : booléen[y][x], true => accessible, false => mur
-/// - [playerX], [playerY], [playerOrientation]
-/// - [cellSize] : taille d'une case
-/// - [stepMessage] : phrase style "Vous tournez à gauche"
-/// - [onAnimationDone] : callback quand l'animation de déplacement est finie (facultatif).
-class Dungeon9x9 extends StatefulWidget {
-  final List<List<bool>> mapBool;
+/// Représente la cellule calculée
+class _CellInfo {
+  final bool isPlayer;
+  final bool accessible;
+  final bool isEdge; // Bord de la grande map
+  final String edgeSide; // "top", "bottom", "left", "right", ou ""
+  final double fadeFactor;
+
+  _CellInfo({
+    required this.isPlayer,
+    required this.accessible,
+    required this.isEdge,
+    required this.edgeSide,
+    required this.fadeFactor,
+  });
+}
+
+/// Widget qui affiche un carré 5×5 autour du joueur
+class Dungeon7x7 extends StatelessWidget {
+  final List<List<Map<String, dynamic>>> mapObjects;
   final int playerX;
   final int playerY;
   final String playerOrientation;
   final double cellSize;
   final String stepMessage;
-  final VoidCallback? onAnimationDone;
 
-  const Dungeon9x9({
+  // Couleurs custom
+  static const accessibleColor = Color(0xFFCFD8DC); // bleu-gris clair
+  static const inaccessibleColor = Color(0xFF455A64); // bleu-gris foncé
+
+  const Dungeon7x7({
     Key? key,
-    required this.mapBool,
+    required this.mapObjects,
     required this.playerX,
     required this.playerY,
     required this.playerOrientation,
-    this.cellSize = 32.0,
+    this.cellSize = 50.0,
     this.stepMessage = '',
-    this.onAnimationDone,
   }) : super(key: key);
 
   @override
-  State<Dungeon9x9> createState() => _Dungeon9x9State();
-}
-
-class _Dungeon9x9State extends State<Dungeon9x9> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  double _moveProgress = 1.0; // 1 => stable, 0 => animation départ
-
-  @override
-  void initState() {
-    super.initState();
-    // Contrôleur pour animer sur ~500ms
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..addListener(() {
-        setState(() {
-          _moveProgress = _animController.value;
-        });
-      })
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          // animation terminée
-          if (widget.onAnimationDone != null) {
-            widget.onAnimationDone!();
-          }
-        }
-      });
-    // Si on a un stepMessage, on lance l'anim => l'effet “vous tournez…”
-    if (widget.stepMessage.isNotEmpty) {
-      _animController.forward(from: 0);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant Dungeon9x9 oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Si le stepMessage change, on relance l’anim
-    if (widget.stepMessage.isNotEmpty && widget.stepMessage != oldWidget.stepMessage) {
-      _animController.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // On construit la grille 9×9
-    final matrix = _buildMatrix9x9();
-
+    final matrix = _buildMatrix();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (widget.stepMessage.isNotEmpty) ...[
-          // Petit message (tourner à gauche, etc.)
-          Opacity(
-            opacity: 1.0 - _moveProgress, // le message disparaît quand l'anim progresse
+        if (stepMessage.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
-              widget.stepMessage,
-              style: AppTheme.nunitoTextStyle(color: Colors.black, fontSize: 20, bold: true),
+              stepMessage,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(height: 8),
-        ],
-        // La grille
-        _buildGrid(matrix),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (row) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(5, (col) {
+                final cell = matrix[row][col];
+                return _buildOneCell(cell);
+              }),
+            );
+          }),
+        ),
       ],
     );
   }
 
-  Widget _buildGrid(List<List<_CellInfo>> matrix) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(9, (row) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(9, (col) {
-            final cell = matrix[row][col];
-            return _buildOneCell(cell);
-          }),
-        );
-      }),
-    );
-  }
-
-  Widget _buildOneCell(_CellInfo cell) {
-    // On calcule l'opacité => plus c'est loin, plus c'est transparent
-    final distManhattan = (cell.gridRow - 4).abs() + (cell.gridCol - 4).abs();
-    final maxDist = 8.0; // environ
-    double alpha = 1.0 - (distManhattan / maxDist) * 0.6;
-    alpha = alpha.clamp(0.3, 1.0);
-
-    // Si c'est "derrière" le joueur => on l'assombrit comme un brouillard
-    if (!cell.inFront) {
-      alpha = 0.2; 
-    }
-
-    Color color;
-    if (cell.isPlayer) {
-      // Joueur
-      color = Colors.orangeAccent;
-    } else if (!cell.accessible) {
-      // Mur
-      color = Colors.blueGrey.shade700;
-    } else {
-      // Chemin
-      color = Colors.white;
-    }
-
-    // "En marge" => icône exit
-    final isEdge = (cell.gridRow == 0 || cell.gridRow == 8 || cell.gridCol == 0 || cell.gridCol == 8);
-
-    return Container(
-      width: widget.cellSize,
-      height: widget.cellSize,
-      margin: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-        color: color.withOpacity(alpha),
-        border: Border.all(color: Colors.black, width: 1),
+  List<List<_CellInfo>> _buildMatrix() {
+    const size = 5;
+    const center = 2;
+    final maxRows = mapObjects.length;
+    final maxCols = (maxRows > 0) ? mapObjects[0].length : 0;
+    final matrix = List.generate(
+      size,
+      (_) => List.generate(
+        size,
+        (_) => _CellInfo(isPlayer: false, accessible: false, isEdge: false, edgeSide: '', fadeFactor: 1.0),
       ),
-      child: cell.isPlayer
-          ? const Icon(Icons.person, color: Colors.white)
-          : isEdge && cell.accessible
-              ? const Icon(Icons.exit_to_app, color: Colors.red, size: 18)
-              : null,
     );
-  }
 
-  /// Construit le tableau 9×9
-  List<List<_CellInfo>> _buildMatrix9x9() {
-    // Centre => (4,4)
-    // On parcourt row=0..8, col=0..8
-    final matrix = List.generate(9, (row) => List.generate(9, (col) {
-      return _CellInfo(row, col, false, false, false, true);
-    }));
-
-    for (int row = 0; row < 9; row++) {
-      for (int col = 0; col < 9; col++) {
-        final dx = col - 4; 
-        final dy = row - 4; 
-        final mapX = widget.playerX + dx;
-        final mapY = widget.playerY + dy;
-
+    for (int row = 0; row < size; row++) {
+      for (int col = 0; col < size; col++) {
+        final dx = col - center;
+        final dy = row - center;
+        final mapX = playerX + dx;
+        final mapY = playerY + dy;
         bool accessible = false;
-        if (_inBounds(mapX, mapY)) {
-          accessible = widget.mapBool[mapY][mapX];
+        bool isPlayer = false;
+        bool isEdge = false;
+        String edgeSide = '';
+        double fadeFactor = 1.0;
+
+        final dist = sqrt(pow(col - center, 2) + pow(row - center, 2));
+        fadeFactor = (1.0 - dist * 0.15).clamp(0.2, 1.0);
+
+        if (mapY >= 0 && mapY < maxRows && mapX >= 0 && mapX < maxCols) {
+          final obj = mapObjects[mapY][mapX];
+          accessible = (obj['accessible'] == true);
+          if (mapX == playerX && mapY == playerY) {
+            isPlayer = true;
+          }
+          if (mapY == 0) {
+            isEdge = true;
+            edgeSide = 'top';
+          } else if (mapY == maxRows - 1) {
+            isEdge = true;
+            edgeSide = 'bottom';
+          } else if (mapX == 0) {
+            isEdge = true;
+            edgeSide = 'left';
+          } else if (mapX == maxCols - 1) {
+            isEdge = true;
+            edgeSide = 'right';
+          }
         }
-        // Est-ce le joueur lui-même ?
-        final isPlayer = (mapX == widget.playerX && mapY == widget.playerY);
-
-        // Savoir si c’est dans le champ de vision (pas derrière)
-        final inFront = _isInFront(mapX, mapY);
-
-        matrix[row][col] = _CellInfo(row, col, isPlayer, accessible, inFront, true);
+        matrix[row][col] = _CellInfo(
+          isPlayer: isPlayer,
+          accessible: accessible,
+          isEdge: isEdge,
+          edgeSide: edgeSide,
+          fadeFactor: fadeFactor,
+        );
       }
     }
     return matrix;
   }
 
-  bool _inBounds(int x, int y) {
-    return (y >= 0 && y < widget.mapBool.length && x >= 0 && x < widget.mapBool[0].length);
+  Widget _buildOneCell(_CellInfo cell) {
+    final baseColor = cell.accessible ? accessibleColor : inaccessibleColor;
+    final color = baseColor.withOpacity(cell.fadeFactor);
+    return Container(
+      margin: const EdgeInsets.all(1.0),
+      width: cellSize,
+      height: cellSize,
+      child: Stack(
+        children: [
+          Positioned.fill(child: Container(color: color)),
+          if (cell.isPlayer)
+            Center(
+              child: Transform.rotate(
+                angle: _rotationAngleForOrientation(playerOrientation),
+                child: Icon(
+                  Icons.navigation, // flèche du joueur
+                  color: Colors.white.withOpacity(cell.fadeFactor),
+                  size: cellSize * 0.6,
+                ),
+              ),
+            ),
+          if (cell.isEdge && !cell.isPlayer)
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: _buildEdgeArrow(cell.edgeSide, cell.fadeFactor),
+            ),
+        ],
+      ),
+    );
   }
 
-  bool _isInFront(int x, int y) {
-    final dx = x - widget.playerX;
-    final dy = y - widget.playerY;
-    final ori = widget.playerOrientation;
-    // ex: si orientation="north", tout ce qui est plus bas (dy>0) => derrière
-    if (ori == 'north' && dy > 0) return false;
-    if (ori == 'south' && dy < 0) return false;
-    if (ori == 'east'  && dx < 0) return false;
-    if (ori == 'west'  && dx > 0) return false;
-
-    return true;
+  double _rotationAngleForOrientation(String orientation) {
+    switch (orientation.toLowerCase()) {
+      case 'north':
+        return 0.0;
+      case 'east':
+        return pi / 2;
+      case 'south':
+        return pi;
+      case 'west':
+        return -pi / 2;
+      default:
+        return 0.0;
+    }
   }
-}
 
-/// Juste un container interne
-class _CellInfo {
-  final int gridRow; 
-  final int gridCol;
-  final bool isPlayer;
-  final bool accessible;
-  final bool inFront;
-  final bool visible; 
-  _CellInfo(this.gridRow, this.gridCol, this.isPlayer, this.accessible, this.inFront, this.visible);
+  Widget _buildEdgeArrow(String side, double fade) {
+    IconData icon;
+    switch (side) {
+      case 'top':
+        icon = Icons.arrow_upward;
+        break;
+      case 'bottom':
+        icon = Icons.arrow_downward;
+        break;
+      case 'left':
+        icon = Icons.arrow_back;
+        break;
+      case 'right':
+        icon = Icons.arrow_forward;
+        break;
+      default:
+        icon = Icons.exit_to_app;
+        break;
+    }
+    return Icon(
+      icon,
+      color: Colors.white.withOpacity(fade),
+      size: cellSize * 0.4,
+    );
+  }
 }

@@ -11,6 +11,19 @@ class GameService {
   Function(Map<String, dynamic>)? _onPositionUpdateCallback;
 
   // ----------------------------------------------------------------
+  // DEBUG
+  // ----------------------------------------------------------------
+
+  void teleportPlayer(String gameId, String playerId, String coordinate) {
+    print("GameService: Teleporting player $playerId to $coordinate");
+    socket.emit('teleportPlayer', {
+      'gameId': gameId,
+      'playerId': playerId,
+      'coordinate': coordinate,
+    });
+  }
+
+  // ----------------------------------------------------------------
   // CONSTRUCTOR & SOCKET INITIALIZATION
   // ----------------------------------------------------------------
   GameService() {
@@ -82,6 +95,7 @@ class GameService {
     });
   }
 
+
   void startGame(String gameId) {
     print("GameService: Requesting to start game for $gameId");
     socket.emit('startGame', {'gameId': gameId});
@@ -89,7 +103,8 @@ class GameService {
 
   void onStartGame(Function(Map<String, dynamic>) callback) {
     socket.on('startGame', (data) {
-      _logPlayerPosition(data);
+      print('[Front] onStartGame => data: $data');
+      // => data = { maze: [...], players: [...], activePlayerName: "Tom" }
       callback(Map<String, dynamic>.from(data));
     });
   }
@@ -156,12 +171,7 @@ class GameService {
 
   void onGameInfos(Function(Map<String, dynamic>) callback) {
     socket.on('gameInfos', (data) {
-      if (data.containsKey('players')) {
-        print("GameService: Received gameInfos (Players count: ${data['players'].length})");
-        for (var p in data['players']) {
-          print(" - ${p['playerName']}, berries=${p['berries']}");
-        }
-      }
+      print("[Front] onGameInfos => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
@@ -183,22 +193,20 @@ class GameService {
     _onPositionUpdateCallback = callback;
     socket.on('positionUpdate', (data) {
       final parsed = Map<String, dynamic>.from(data);
-      print("GameService: *** positionUpdate *** => $parsed");
-      // log position A1..P20
+      print("[Front] *** positionUpdate *** => $parsed"); // AJOUT: log
       if (parsed['position'] != null && parsed['position'] is Map) {
         int px = parsed['position']['x'] ?? 0;
         final py = parsed['position']['y'] ?? 0;
         final colLetter = String.fromCharCode(65 + px);
         final rowNumber = py + 1;
-        print(" -> position: ${colLetter}${rowNumber}, orientation=${parsed['orientation']}");
+        print("[Front] -> position: ${colLetter}${rowNumber}, orientation=${parsed['orientation']}");
       }
-      print(" -> localMapSnippet = ${parsed['localMapSnippet']}");
+      // snippet si besoin
       if (_onPositionUpdateCallback != null) {
         _onPositionUpdateCallback!(parsed);
       }
     });
   }
-
   void onMoveError(Function(String) callback) {
     socket.on('moveError', (data) {
       print("GameService: Move error => $data");
