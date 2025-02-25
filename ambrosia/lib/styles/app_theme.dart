@@ -5,27 +5,29 @@ class AppTheme {
   // ---------------------------------------------------------------------------
   // COULEURS
   // ---------------------------------------------------------------------------
-  static const Color greenButton = Color(0xFF135836);
-  static const Color redButton = Color(0xFFBF1A2F); 
-  static const Color darkerGreen = Color.fromARGB(255, 6, 37, 22);
-  static const Color lightMint   = Color.fromARGB(255, 211, 248, 228);
-  static const Color orangeTitle = Color.fromARGB(255, 240, 110, 10);
-  static const Color white       = Colors.white;
+  static const Color titleYellow   = Color(0xFFFEE8BB);
+  static const Color subtitleWhite = Color(0xFFFFFCF6);
 
-  static const Color correctGreen  = Color(0xFF8BDD8E); 
-  static const Color incorrectRed  = Color(0xFFF28080);
+  static const Color white         = Colors.white;
+  static const Color textBlue = Color.fromRGBO(53, 84, 116, 0);
+
+  static const Color buttonBlue    = Color(0xFF4D758A);
+  static const Color incorrectRed    = Color.fromARGB(255, 223, 10, 10);
+  static const Color correctGreen    = Color.fromARGB(255, 3, 207, 6);
+
+  
 
   // ---------------------------------------------------------------------------
-  // IMAGE DE FOND
+  // IMAGES DE FOND
   // ---------------------------------------------------------------------------
-  static const String backgroundImage = 'assets/images/fond2.png';
+  static const String homeBackground    = 'assets/images/home-background.png';
+  static const String defaultBackground = 'assets/images/background2.png';
 
   // ---------------------------------------------------------------------------
   // THEME GLOBAL
   // ---------------------------------------------------------------------------
   static ThemeData themeData = ThemeData(
-    // Couleurs principales
-    primaryColor: greenButton,
+    primaryColor: buttonBlue,
     scaffoldBackgroundColor: Colors.transparent,
     fontFamily: 'Nunito',
 
@@ -33,25 +35,26 @@ class AppTheme {
     inputDecorationTheme: InputDecorationTheme(
       labelStyle: const TextStyle(
         fontSize: 14,
-        color: greenButton,
+        color: buttonBlue,
       ),
       floatingLabelStyle: const TextStyle(
         fontSize: 12,
-        color: greenButton,
+        color: buttonBlue,
       ),
-      enabledBorder: UnderlineInputBorder(
-        borderSide: const BorderSide(color: greenButton),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: buttonBlue),
       ),
-      focusedBorder: UnderlineInputBorder(
-        borderSide: const BorderSide(color: greenButton, width: 2),
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: buttonBlue, width: 2),
       ),
     ),
 
     // Personnalisation de la sélection, du curseur etc.
-    textSelectionTheme: const TextSelectionThemeData(
-      cursorColor: greenButton, // Couleur du curseur
-      selectionColor: Color.fromARGB(100, 19, 88, 54), // Sélection en vert translucide
-      selectionHandleColor: greenButton, // Poignet de sélection (pour le drag)
+    textSelectionTheme: TextSelectionThemeData(
+      cursorColor: buttonBlue, // Couleur du curseur
+      // Sélection en bleu translucide (exemple ARGB similaire à l'ancien code)
+      selectionColor: const Color.fromARGB(100, 77, 117, 138),
+      selectionHandleColor: buttonBlue,
     ),
 
     // Thème de la typo
@@ -60,8 +63,9 @@ class AppTheme {
         fontSize: 48,
         fontWeight: FontWeight.bold,
         fontFamily: 'PermanentMarker',
-        color: orangeTitle,
+        color: titleYellow,
         shadows: [
+          // On conserve l'ombre du style précédent
           Shadow(
             color: Colors.black38,
             blurRadius: 6,
@@ -70,23 +74,22 @@ class AppTheme {
         ],
       ),
       titleLarge: TextStyle(
-        fontSize: 28,
+        fontSize: 22,
         fontWeight: FontWeight.w600,
-        color: greenButton,
+        color: subtitleWhite,
       ),
       bodyLarge: TextStyle(
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: FontWeight.bold,
-        color: greenButton,
+        color: buttonBlue,
       ),
       bodyMedium: TextStyle(
-        fontWeight: FontWeight.bold,
         fontSize: 18,
-        color: greenButton,
+        color: buttonBlue,
       ),
       bodySmall: TextStyle(
         fontSize: 16,
-        color: greenButton,
+        color: buttonBlue,
       ),
     ),
 
@@ -105,7 +108,7 @@ class AppTheme {
     // Thème des TextButtons
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: greenButton,
+        foregroundColor: buttonBlue,
         textStyle: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
@@ -119,21 +122,21 @@ class AppTheme {
 
     // Thème des Dialogues
     dialogTheme: DialogTheme(
-      backgroundColor: lightMint,
+      backgroundColor: subtitleWhite,
       titleTextStyle: const TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.bold,
-        color: greenButton,
+        color: buttonBlue,
         fontFamily: 'Nunito-Bold',
       ),
       contentTextStyle: const TextStyle(
         fontSize: 15,
-        color: greenButton,
+        color: buttonBlue,
         fontFamily: 'Nunito',
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: greenButton, width: 4),
+        side: const BorderSide(color: buttonBlue, width: 4),
       ),
     ),
   );
@@ -153,29 +156,30 @@ class AppTheme {
       fontSize: fontSize,
       fontWeight: bold ? FontWeight.bold : FontWeight.normal,
       fontFamily: 'Nunito-Bold',
-      color: color ?? greenButton,
+      color: color ?? buttonBlue,
       fontStyle: fontStyle,
     );
   }
 
-  /// Décoration de fond par défaut (image en plein écran)
-  static BoxDecoration backgroundDecoration() {
-    return const BoxDecoration(
+  /// Décoration de fond par défaut
+  /// isHome = true => background de la home
+  /// isHome = false => background par défaut
+  static BoxDecoration backgroundDecoration({bool isHome = false}) {
+    return BoxDecoration(
       image: DecorationImage(
-        image: AssetImage(backgroundImage),
+        image: AssetImage(isHome ? homeBackground : defaultBackground),
         fit: BoxFit.cover,
       ),
     );
   }
 
-  /// Bouton personnalisé (ex: "Connexion", "Inscription", etc.)
+  /// Bouton personnalisé
   static Widget customButton({
     required String label,
     required VoidCallback? onPressed,
     Color? backgroundColor,
   }) {
-    // Valeur par défaut
-    final Color mainColor = backgroundColor ?? AppTheme.greenButton;
+    final Color mainColor = backgroundColor ?? buttonBlue;
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -192,24 +196,21 @@ class AppTheme {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ButtonStyle(
-          // Couleur de fond par défaut
           backgroundColor: MaterialStateProperty.resolveWith<Color>(
             (states) {
               // État désactivé
               if (states.contains(MaterialState.disabled)) {
-                // Couleur pour un bouton disabled
-                return mainColor.withOpacity(0.5); 
+                return mainColor.withOpacity(0.5);
               }
               // État pressé
               if (states.contains(MaterialState.pressed)) {
-                // Couleur plus sombre ou plus claire selon ton goût
                 return mainColor.withOpacity(0.7);
               }
               // État normal
               return mainColor;
             },
           ),
-          foregroundColor: MaterialStateProperty.all<Color>(AppTheme.white),
+          foregroundColor: MaterialStateProperty.all<Color>(white),
           textStyle: MaterialStateProperty.all<TextStyle>(
             const TextStyle(
               fontSize: 20,
@@ -221,7 +222,7 @@ class AppTheme {
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(25),
               side: const BorderSide(
-                color: AppTheme.white,
+                color: white,
                 width: 2,
               ),
             ),
@@ -240,7 +241,7 @@ class AppTheme {
       fontWeight: FontWeight.w300,
       fontStyle: FontStyle.italic,
       fontSize: screenWidth * fontScale,
-      color: darkerGreen,
+      color: buttonBlue,
     );
   }
 
@@ -252,7 +253,7 @@ class AppTheme {
       fontWeight: FontWeight.w300,
       fontStyle: FontStyle.italic,
       fontSize: screenWidth * fontScale,
-      color: darkerGreen,
+      color: buttonBlue,
     );
   }
 
@@ -269,7 +270,7 @@ class AppTheme {
   /// Décoration d'un petit message en surimpression
   static BoxDecoration transientMessageBoxDecoration(double borderRadius) {
     return BoxDecoration(
-      color: Colors.green[900],
+      color: buttonBlue,
       borderRadius: BorderRadius.circular(borderRadius),
       boxShadow: const [
         BoxShadow(

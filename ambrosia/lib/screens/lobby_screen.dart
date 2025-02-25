@@ -11,11 +11,11 @@ import 'tutorial_screen.dart';
 import 'game_screen.dart';
 
 class LobbyScreen extends StatefulWidget {
-  final GameService gameService; // Injection du GameService
+  final GameService gameService; 
   final String gameId;
   final String playerName;
   final bool isHost;
-  final String avatarBase64; // Avatar déjà existant (compte connecté) ou vide
+  final String avatarBase64; 
   final String playerId;
 
   const LobbyScreen({
@@ -25,7 +25,7 @@ class LobbyScreen extends StatefulWidget {
     required this.playerId,
     required this.playerName,
     this.isHost = false,
-    this.avatarBase64 = '', 
+    this.avatarBase64 = '',
   }) : super(key: key);
 
   @override
@@ -58,7 +58,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     _setupSocketListeners();
     _gameService.joinRoom(widget.gameId);
 
-    // Si on a déjà un avatarBase64, on le stocke et on l’envoie au serveur
+    // Si on a déjà un avatarBase64 (compte connecté), on l’envoie directement
     if (widget.avatarBase64.isNotEmpty) {
       _avatars[widget.playerId] = widget.avatarBase64;
       _gameService.updateAvatar(widget.gameId, widget.playerId, widget.avatarBase64);
@@ -68,16 +68,13 @@ class _LobbyScreenState extends State<LobbyScreen> {
   void _setupSocketListeners() {
     // Liste complète de joueurs déjà présents
     _gameService.socket.on('currentPlayers', (data) {
-      // print('LobbyScreen: currentPlayers => $data');
       setState(() {
-        // On réinitialise
         _playerIds.clear();
         _playerNames.clear();
         _readyStatus.clear();
         _avatars.clear();
         readyCount = 0;
 
-        // data est un tableau d’objets (un par joueur)
         for (var p in data) {
           final pid = p['playerId'] as String;
           final pname = p['playerName'] as String;
@@ -95,7 +92,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     // Nouvel arrivant
     _gameService.socket.on('playerJoined', (data) {
-      // print('LobbyScreen: playerJoined => $data');
       setState(() {
         final pid = data['playerId'];
         final pname = data['playerName'] ?? '???';
@@ -136,7 +132,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
     // Démarrage de la partie (-> tutorial)
     _gameService.socket.on('startGame', (data) {
-      // print('LobbyScreen: startGame => data=$data');
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -153,12 +148,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   void dispose() {
-    // On ne déconnecte pas ici le socket si on poursuit la partie
     super.dispose();
   }
 
   // ---------------------------------------------------
-  // PHOTO
+  // PRENDRE UNE PHOTO
   // ---------------------------------------------------
   Future<void> _takePhoto() async {
     final XFile? picked = await _imagePicker.pickImage(source: ImageSource.camera);
@@ -168,7 +162,6 @@ class _LobbyScreenState extends State<LobbyScreen> {
     final base64Str = base64Encode(bytes);
     print("LobbyScreen: Photo prise => base64 length=${base64Str.length}");
 
-    // Envoyer au serveur
     if (widget.playerId.isNotEmpty) {
       print("DEBUG: Emitting updateAvatar with playerId=${widget.playerId}");
       _gameService.updateAvatar(widget.gameId, widget.playerId, base64Str);
@@ -203,7 +196,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("Tous les joueurs sont prêts !"),
-        content: const Text("Souhaitez-vous lancer la partie ?"),
+        content: const Text("Souhaitez-vous entrer dans le dédale et lancer la partie ?"),
         actions: [
           TextButton(
             onPressed: () {
@@ -238,7 +231,14 @@ class _LobbyScreenState extends State<LobbyScreen> {
       body: Stack(
         children: [
           // Fond
-          Container(decoration: AppTheme.backgroundDecoration()),
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/background2.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
 
           // Contenu
           Padding(
@@ -247,35 +247,38 @@ class _LobbyScreenState extends State<LobbyScreen> {
               children: [
                 SizedBox(height: screenHeight * 0.05),
 
-                // Code de la partie
+                // Code de la partie (titre)
                 Text(
-                  'Game code:',
-                  style: Theme.of(context).textTheme.bodyText1?.copyWith(
-                        fontSize: 20,
-                        color: AppTheme.greenButton,
-                      ),
+                  'Code de la partie :',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w100,
+                    fontFamily: 'PermanentMarker',
+                    color: AppTheme.titleYellow, // Jaune
+                  ),
                 ),
+                // Code de la partie (valeur)
                 Text(
                   widget.gameId,
-                  style: Theme.of(context).textTheme.headline6?.copyWith(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.titleYellow, // Jaune
+                    fontFamily: 'Nunito',
+                  ),
                 ),
                 SizedBox(height: screenHeight * 0.03),
 
                 // Avatar
                 GestureDetector(
-                  // Si on a déjà un avatar passé par l'utilisateur connecté,
-                  // on désactive la prise de photo. Sinon => _takePhoto
                   onTap: widget.avatarBase64.isNotEmpty ? null : _takePhoto,
                   child: Container(
                     width: screenHeight * 0.15,
                     height: screenHeight * 0.15,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: AppTheme.lightMint,
-                      border: Border.all(color: AppTheme.greenButton, width: 2),
+                      color: AppTheme.white,
+                      border: Border.all(color: AppTheme.buttonBlue, width: 2),
                       image: _playerImage != null
                           ? DecorationImage(
                               image: FileImage(_playerImage!),
@@ -292,7 +295,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.lightMint,
+                    color: AppTheme.white,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -301,7 +304,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.greenButton,
+                      color: AppTheme.buttonBlue,
                       fontFamily: 'Nunito',
                     ),
                   ),
@@ -311,16 +314,19 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 // Nombre de joueurs prêts
                 Text(
                   'Players ready: $readyCount/${_playerIds.length}',
-                  style: Theme.of(context).textTheme.bodyText1?.copyWith(fontSize: 18),
+                  style: Theme.of(context).textTheme.bodyText1?.copyWith(
+                        fontSize: 18,
+                        fontFamily: 'Nunito',
+                      ),
                 ),
                 SizedBox(height: screenHeight * 0.03),
 
-                // Liste des joueurs
+                // Liste des joueurs (cadre transparent à 80%)
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.lightMint,
-                      border: Border.all(color: AppTheme.greenButton, width: 2),
+                      color: AppTheme.white.withOpacity(0.8),
+                      border: Border.all(color: AppTheme.buttonBlue, width: 2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     padding: const EdgeInsets.all(8.0),
@@ -353,10 +359,35 @@ class _LobbyScreenState extends State<LobbyScreen> {
                 ),
                 SizedBox(height: screenHeight * 0.03),
 
-                // Bouton Ready / Unready
-                AppTheme.customButton(
-                  label: isReady ? "Unready" : "Ready!",
-                  onPressed: () => _toggleReadyStatus(!isReady),
+                // Bouton Ready / Unready => agrandi
+                // Ajout dans la section du bouton Ready / Unready
+                SizedBox(
+                  width: 220, // Largeur augmentée
+                  height: 70, // Hauteur augmentée
+                  child: ElevatedButton(
+                    onPressed: () => _toggleReadyStatus(!isReady),
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(AppTheme.buttonBlue),
+                      foregroundColor: MaterialStateProperty.all(AppTheme.white),
+                      textStyle: MaterialStateProperty.all(
+                        const TextStyle(
+                          fontSize: 24, // Augmenté pour un meilleur rendu
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Nunito',
+                        ),
+                      ),
+                      shape: MaterialStateProperty.all(
+                        RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25),
+                          side: const BorderSide(
+                            color: AppTheme.white,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    child: Text(isReady ? "Unready" : "Ready!"),
+                  ),
                 ),
               ],
             ),
@@ -366,9 +397,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
-  // Petit helper pour afficher la photo / avatar / icône
+  // Petit helper pour afficher la bonne image dans l'avatar
   Widget _buildAvatarChild(double screenHeight) {
-    // 1) S’il y a déjà un `_playerImage` => on affiche l’image camera
+    // 1) S’il y a une image prise via la caméra
     if (_playerImage != null) {
       return ClipOval(
         child: Image.file(
@@ -380,7 +411,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
       );
     }
 
-    // 2) Sinon, si on a un avatar dans _avatars pour ce player
+    // 2) Sinon, si on a un avatar reçu depuis l’API
     final currentAvatarB64 = _avatars[widget.playerId] ?? '';
     if (currentAvatarB64.isNotEmpty) {
       return ClipOval(
@@ -393,11 +424,11 @@ class _LobbyScreenState extends State<LobbyScreen> {
       );
     }
 
-    // 3) Sinon on affiche l’icône par défaut (caméra)
+    // 3) Sinon on affiche l’icône caméra
     return Icon(
       Icons.camera_alt_outlined,
       size: screenHeight * 0.07,
-      color: AppTheme.greenButton,
+      color: AppTheme.buttonBlue,
     );
   }
 }

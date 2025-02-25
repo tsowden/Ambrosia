@@ -104,7 +104,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.greenButton,
+                    color: AppTheme.buttonBlue,
                   ),
                 ),
                 SizedBox(height: 40),
@@ -114,7 +114,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Text(
                     text,
-                    style: TextStyle(fontSize: 18, color: AppTheme.greenButton),
+                    style: TextStyle(fontSize: 18, color: AppTheme.buttonBlue),
                     textAlign: TextAlign.center,
                   ),
                 ),

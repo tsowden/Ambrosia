@@ -283,17 +283,17 @@ class _ProfilScreenState extends State<ProfilScreen> {
   //-------------------------
   Future<void> _showImagePickerOptions() async {
     showModalBottomSheet(
-      backgroundColor: AppTheme.lightMint,
+      backgroundColor: AppTheme.white,
       context: context,
       builder: (ctx) {
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: AppTheme.greenButton),
+                leading: const Icon(Icons.camera_alt, color: AppTheme.buttonBlue),
                 title: Text(
                   'Prendre une photo',
-                  style: AppTheme.nunitoTextStyle(color: AppTheme.greenButton),
+                  style: AppTheme.nunitoTextStyle(color: AppTheme.buttonBlue),
                 ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -301,10 +301,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: AppTheme.greenButton),
+                leading: const Icon(Icons.photo_library, color: AppTheme.buttonBlue),
                 title: Text(
                   'Choisir depuis la galerie',
-                  style: AppTheme.nunitoTextStyle(color: AppTheme.greenButton),
+                  style: AppTheme.nunitoTextStyle(color: AppTheme.buttonBlue),
                 ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -355,7 +355,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
           'Aucun profil',
           style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
             fontSize: 36,
-            color: AppTheme.greenButton,
+            color: AppTheme.titleYellow,
+            fontWeight: FontWeight.w100
           ),
           textAlign: TextAlign.center,
         ),
@@ -375,7 +376,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             text: TextSpan(
               style: AppTheme.themeData.textTheme.bodyMedium?.copyWith(
                 fontSize: 20,
-                color: AppTheme.greenButton,
+                color: AppTheme.buttonBlue,
               ),
               children: [
                 const TextSpan(text: "Vous n'êtes pas connecté.\n\n"),
@@ -442,6 +443,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               decoration: TextDecoration.underline,
               fontStyle: FontStyle.italic,
               fontSize: 18,
+              color: AppTheme.subtitleWhite,
             ),
           ),
         ),
@@ -464,7 +466,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
           'Mon profil',
           style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
             fontSize: 36,
-            color: AppTheme.greenButton,
+            color: AppTheme.titleYellow,
+            fontWeight: FontWeight.w100
           ),
           textAlign: TextAlign.center,
         ),
@@ -478,7 +481,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             children: [
               CircleAvatar(
                 radius: 80,
-                backgroundColor: AppTheme.greenButton,
+                backgroundColor: AppTheme.buttonBlue,
                 backgroundImage: avatarBase64.isNotEmpty
                     ? MemoryImage(base64Decode(avatarBase64))
                     : null,
@@ -544,7 +547,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
-                color: AppTheme.greenButton,
+                color: AppTheme.buttonBlue,
                 tooltip: "Modifier le pseudo",
                 onPressed: _showEditPseudoDialog,
               ),
@@ -562,7 +565,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             text: TextSpan(
               style: AppTheme.themeData.textTheme.bodyMedium?.copyWith(
                 fontSize: 20,
-                color: AppTheme.greenButton,
+                color: AppTheme.buttonBlue,
               ),
               children: const [
                 TextSpan(
@@ -603,7 +606,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 width: double.infinity,
                 child: AppTheme.customButton(
                   label: 'Déconnexion',
-                  backgroundColor: AppTheme.redButton,
+                  backgroundColor: AppTheme.incorrectRed,
                   onPressed: _logout,
                 ),
               ),

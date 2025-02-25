@@ -92,6 +92,20 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
   };
 
   // ----------------------------------------------------
+  // VARIABLES POUR POSITION/ORIENTATION + SNIPPET
+  // ----------------------------------------------------
+  int _playerX = 0;
+  int _playerY = 0;
+  String _playerOrientation = 'south'; // ou n'importe quelle valeur par défaut
+  Map<String,int> _localMapSnippet = {
+    'me': -1,
+    'f1': -1,
+    'f2': -1,
+    'left': -1,
+    'right': -1,
+  };
+
+  // ----------------------------------------------------
   // GESTION DES MESSAGES ÉPHÉMÈRES (comme l'ancien code)
   // ----------------------------------------------------
   List<bool> _slotsOccupied = [false, false, false, false];
@@ -224,6 +238,24 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
       setState(() {});
     });
 
+    gs.onPositionUpdate((data) {
+    // data = { playerId, position:{x,y}, orientation:"...", localMapSnippet: {...} }
+    setState(() {
+      if (data['position'] != null) {
+        _playerX = data['position']['x'] ?? 0;
+        _playerY = data['position']['y'] ?? 0;
+      }
+      if (data['orientation'] != null) {
+        _playerOrientation = data['orientation'];
+      }
+      if (data['localMapSnippet'] != null) {
+        _localMapSnippet = Map<String,int>.from(data['localMapSnippet']);
+      }
+      print("Front: onPositionUpdate => data=$data");  
+    }
+    );
+  });
+
     // b) onTurnStarted
     gs.onTurnStarted((data) {
       // Comme dans l'ancien code, on reset tout à chaque début de tour
@@ -287,6 +319,11 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
     gs.onTurnStateChanged((data) {
       setState(() {
         _turnState = data['turnState'] ?? _turnState;
+        final pid = data['playerId'];
+        if (_turnState == 'drawStep' && pid == widget.playerId) {
+          print("Front: It's my turn to draw a card => calling playerDrawCard()");
+          widget.gameService.playerDrawCard(widget.gameId, widget.playerId);
+        }
         final rawBetOptions = data['betOptions'];
         if (rawBetOptions is List) {
           _betOptions = rawBetOptions.map((e) => e.toString()).toList();
@@ -472,7 +509,7 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.lightMint,
+        backgroundColor: AppTheme.white,
         title: Text('Quit Game', style: AppTheme.themeData.textTheme.bodyLarge),
         content: Text(
           'Are you sure you want to quit the current game?',
@@ -539,6 +576,10 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
             quizTotalQuestions: _quizTotalQuestions,
             quizEarnedBerries: _quizEarnedBerries,
             validMoves: _validMoves,
+            playerX: _playerX,
+            playerY: _playerY,
+            playerOrientation: _playerOrientation,
+            localMapSnippet: _localMapSnippet,
           ),
 
           // b) Inventory ou Quest si _currentIndex = 1 ou 2
@@ -571,7 +612,7 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         currentIndex: _currentIndex,
         onTap: _onNavItemTapped,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppTheme.greenButton,
+        backgroundColor: AppTheme.buttonBlue,
         selectedItemColor: AppTheme.white,
         unselectedItemColor: AppTheme.white.withOpacity(0.5),
         items: const [

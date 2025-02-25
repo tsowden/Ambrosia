@@ -80,7 +80,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 "Inventory",
                 style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
                   fontSize: 36,
-                  color: AppTheme.greenButton,
+                  color: AppTheme.buttonBlue,
                 ),
               ),
             ),
@@ -225,7 +225,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.lightMint,
+          backgroundColor: AppTheme.white,
           title: Text(
             'Discard item?',
             style: AppTheme.themeData.textTheme.bodyLarge,

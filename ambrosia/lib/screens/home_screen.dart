@@ -1,15 +1,18 @@
 // lib/screens/home_screen.dart
 
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:ambrosia/services/game_service.dart';
 import '../services/api_service.dart';
 import '../styles/app_theme.dart';
 import 'lobby_screen.dart';
 import 'package:ambrosia/screens/profil_screen.dart';
-import 'package:ambrosia/services/auth_service.dart'; 
-
+import 'package:ambrosia/services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -21,65 +24,55 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<Map<String, dynamic>?> _getLoggedUserProfile() async {
     final loggedIn = await _authService.isLoggedIn();
     if (!loggedIn) return null;
-    return await _authService.getProfile(); 
+    return await _authService.getProfile();
   }
 
   // ----------------------------------------------------------
   // CREER UNE PARTIE
   // ----------------------------------------------------------
-
   Future<void> _createGame() async {
     print('HomeScreen: Bouton "Créer une partie" cliqué');
 
-    // 1) Vérifier si on a un compte
     final userProfile = await _getLoggedUserProfile();
-
-    // On déclare en tant que String "non-null", initialisé à vide
     String finalPseudo = '';
     String avatarB64 = '';
 
     if (userProfile != null) {
-      // => On récupère le pseudo et l'avatar depuis le profil
       finalPseudo = userProfile['pseudo'] ?? '';
       avatarB64 = userProfile['avatarBase64'] ?? '';
       print('HomeScreen: Utilisateur connecté, pseudo="$finalPseudo"');
     } else {
-      // => Utilisateur pas connecté => on demande le pseudo
       final pseudoEntered = await _showInputDialog(
         title: 'Créer une partie',
         hint: 'Entrez votre pseudo (max 10 lettres)',
       );
-      // Si l’utilisateur annule ou saisit rien => on quitte
       if (pseudoEntered == null || pseudoEntered.isEmpty) return;
 
-      // On valide le pseudo
       if (!_validatePlayerName(pseudoEntered)) return;
 
       finalPseudo = pseudoEntered;
       avatarB64 = '';
     }
 
-    // 2) Appel API (finalPseudo est forcément non-null et non vide ici)
     try {
       print('HomeScreen: Appel API createGame(playerName=$finalPseudo)');
       final result = await _apiService.createGame(finalPseudo);
 
       if (result != null) {
-        print('HomeScreen: createGame OK -> gameId=${result['gameId']}, playerId=${result['playerId']}');
-
+        print(
+            'HomeScreen: createGame OK -> gameId=${result['gameId']}, playerId=${result['playerId']}');
         final gameService = GameService();
 
-        // 3) Navigation vers Lobby
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => LobbyScreen(
               gameId: result['gameId']!,
               playerId: result['playerId']!,
-              playerName: finalPseudo,       // <- maintenant c’est un String
+              playerName: finalPseudo,
               isHost: true,
               gameService: gameService,
-              avatarBase64: avatarB64,       // <- pareil, c’est un String
+              avatarBase64: avatarB64,
             ),
           ),
         );
@@ -99,16 +92,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _joinGame() async {
     print('HomeScreen: Bouton "Rejoindre une partie" cliqué');
 
-    // On demande le gameId d’abord
     final gameId = await _showInputDialog(
       title: 'Rejoindre une partie',
       hint: 'Entrez le code de la partie',
     );
     if (gameId == null || gameId.isEmpty) return;
 
-    // On vérifie si utilisateur logué
     final userProfile = await _getLoggedUserProfile();
-
     String finalPseudo = '';
     String avatarB64 = '';
 
@@ -129,9 +119,9 @@ class _HomeScreenState extends State<HomeScreen> {
       avatarB64 = '';
     }
 
-    // On appelle l’API
     try {
-      print('HomeScreen: Appel API joinGame(gameId=$gameId, playerName=$finalPseudo)');
+      print(
+          'HomeScreen: Appel API joinGame(gameId=$gameId, playerName=$finalPseudo)');
       final result = await _apiService.joinGame(gameId, finalPseudo);
       if (result != null) {
         print('HomeScreen: joinGame OK -> playerId=${result['playerId']}');
@@ -212,18 +202,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Error'),
+          title: const Text('Error'),
           content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -250,73 +239,169 @@ class _HomeScreenState extends State<HomeScreen> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // Fond commun
+          // Fond de la home
           Container(
-            decoration: AppTheme.backgroundDecoration(),
+            decoration: AppTheme.backgroundDecoration(isHome: true),
           ),
           // Titre
           Positioned(
-            top: screenHeight * 0.15,
+            top: screenHeight * 0.08,
             left: screenWidth * 0.05,
             right: screenWidth * 0.05,
             child: Center(
               child: Text(
                 'Ambrosia',
-                style: Theme.of(context).textTheme.headline1,
+                // On utilise notre thème, MAIS on veut un fontWeight plus léger:
+                style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontWeight: FontWeight.w100, // plus fin que bold
+                    ),
               ),
             ),
           ),
-          // Logo
+          // Sous-titre
           Positioned(
-            top: screenHeight * 0.2,
+            top: screenHeight * 0.14,
             left: 0,
             right: 0,
-            child: Image.asset(
-              'assets/images/logo-renard.png',
-              height: screenHeight * 0.4,
-              width: screenWidth * 0.4,
-              fit: BoxFit.contain,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10), // Ajout de padding
+              child: Center(
+                child: Text(
+                  'Parviendrez-vous à vous hisser au sommet ?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.normal,
+                    fontFamily: 'PermanentMarker',
+                    color: AppTheme.subtitleWhite,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black38,
+                        blurRadius: 4,
+                        offset: Offset(2, 2),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
           // Boutons
           Positioned(
-            bottom: screenHeight * 0.15,
+            bottom: screenHeight * 0.06,
             left: screenWidth * 0.1,
             right: screenWidth * 0.1,
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 280), // largeur maximale fixée
+                // Diminue la largeur max
+                constraints: const BoxConstraints(maxWidth: 250),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     SizedBox(
                       width: double.infinity,
-                      child: AppTheme.customButton(
-                        label: 'Mon profil',
+                      child: ElevatedButton(
+                        // On personnalise encore un peu la hauteur
+                        style: ButtonStyle(
+                          minimumSize: MaterialStateProperty.all(
+                            const Size.fromHeight(56), // plus haut
+                          ),
+                          backgroundColor: MaterialStateProperty.all(
+                              AppTheme.buttonBlue),
+                          foregroundColor:
+                              MaterialStateProperty.all(AppTheme.white),
+                          textStyle: MaterialStateProperty.all(
+                            const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Nunito',
+                            ),
+                          ),
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(23),
+                              side: const BorderSide(
+                                color: AppTheme.white,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ProfilScreen(),
+                              builder: (context) => const ProfilScreen(),
                             ),
                           );
                         },
+                        child: const Text('Mon profil'),
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.01),
+                    SizedBox(height: screenHeight * 0.015),
                     SizedBox(
                       width: double.infinity,
-                      child: AppTheme.customButton(
-                        label: 'Créer une partie',
+                      child: ElevatedButton(
+                        style: ButtonStyle(
+                          minimumSize: MaterialStateProperty.all(
+                            const Size.fromHeight(56),
+                          ),
+                          backgroundColor: MaterialStateProperty.all(
+                              AppTheme.buttonBlue),
+                          foregroundColor:
+                              MaterialStateProperty.all(AppTheme.white),
+                          textStyle: MaterialStateProperty.all(
+                            const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Nunito',
+                            ),
+                          ),
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(23),
+                              side: const BorderSide(
+                                color: AppTheme.white,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
                         onPressed: _createGame,
+                        child: const Text('Créer une partie'),
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.01),
+                    SizedBox(height: screenHeight * 0.015),
                     SizedBox(
                       width: double.infinity,
-                      child: AppTheme.customButton(
-                        label: 'Rejoindre une partie',
+                      child: ElevatedButton(
+                        style: ButtonStyle(
+                          minimumSize: MaterialStateProperty.all(
+                            const Size.fromHeight(56),
+                          ),
+                          backgroundColor: MaterialStateProperty.all(
+                              AppTheme.buttonBlue),
+                          foregroundColor:
+                              MaterialStateProperty.all(AppTheme.white),
+                          textStyle: MaterialStateProperty.all(
+                            const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Nunito',
+                            ),
+                          ),
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(23),
+                              side: const BorderSide(
+                                color: AppTheme.white,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
                         onPressed: _joinGame,
+                        child: const Text('Rejoindre une partie'),
                       ),
                     ),
                   ],
@@ -328,5 +413,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 }

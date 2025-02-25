@@ -3,7 +3,7 @@
 const TurnManager = require('../game/turnManager');
 const { getCardHandlerForCategory } = require('../game/cardHandlers');
 const redisClient = require('../config/redis');
-const getRandomCard = require('../models/card');
+const { getRandomCard } = require('../models/card');
 const { useObjectEffect } = require('../game/objects/objectEffects');
 
 const handleSocketEvents = (io, socket) => {
@@ -195,36 +195,55 @@ const handleSocketEvents = (io, socket) => {
       const gameData = await redisClient.hGetAll(`game:${gameId}`);
       const maze = JSON.parse(gameData.maze || '[]');
       const players = JSON.parse(gameData.players || '[]');
-
+  
       if (players.length === 0) {
         console.error(`Backend: Aucun joueur trouvé pour le jeu ${gameId}`);
         return;
       }
-
+  
+      // Définir le premier joueur
       const firstPlayer = players[0];
       const activePlayerName = firstPlayer.playerName;
       await redisClient.hSet(`game:${gameId}`, 'activePlayerId', firstPlayer.playerId);
-
+  
+      // On envoie 'startGame' au front
       io.to(gameId).emit('startGame', {
         maze,
         players,
         activePlayerName,
       });
-
-      const card = await getRandomCard();
-      const handler = getCardHandlerForCategory(gameId, io, card.card_category);
-      await handler.handleCard(firstPlayer.playerId, card);
-
+  
       console.log(`Backend: Premier joueur actif défini : ${activePlayerName} (ID: ${firstPlayer.playerId})`);
-
+  
       // broadcast infos
       await broadcastGameInfos(gameId);
+      
+      // On calcule le snippet du premier joueur
+      const turnManager = new TurnManager(gameId, io);
+      const snippet = turnManager.getLocalMapSnippet(
+        firstPlayer.position.x,
+        firstPlayer.position.y,
+        firstPlayer.orientation,
+        maze
+      );
+      
+      console.log(`[startGame => snippet] 
+        Player=${firstPlayer.playerName} 
+        pos=(${firstPlayer.position.x},${firstPlayer.position.y}), 
+        orientation=${firstPlayer.orientation}, snippet=`, snippet);
+  
+      // Émet 'positionUpdate' pour le premier joueur
+      io.to(gameId).emit('positionUpdate', {
+        playerId: firstPlayer.playerId,
+        position: firstPlayer.position,
+        orientation: firstPlayer.orientation,
+        localMapSnippet: snippet
+      });
 
     } catch (error) {
       console.error(`Backend: Erreur lors du démarrage du jeu pour ${gameId} :`, error);
     }
   });
-
   // -----------------------------------------------------
   // TURN LOGIC
   // -----------------------------------------------------
@@ -271,6 +290,19 @@ const handleSocketEvents = (io, socket) => {
       socket.emit('activePlayer', { activePlayerName: null });
     }
   });
+
+  
+  socket.on('playerDrawCard', async ({ gameId, playerId }) => {
+    console.log(`Backend: Player ${playerId} wants to draw a card in game ${gameId}`);
+    try {
+      const turnManager = new TurnManager(gameId, io);
+      await turnManager.handleDrawCard(playerId);
+      await broadcastGameInfos(gameId);
+    } catch (err) {
+      console.error("playerDrawCard error:", err);
+    }
+  });
+  
 
   // -----------------------------------------------------
   // MOVE LOGIC

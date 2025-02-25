@@ -7,13 +7,15 @@ class GameService {
   late IO.Socket socket;
   String? majorityVote;
 
+  /// Callback pour positionUpdate côté front
+  Function(Map<String, dynamic>)? _onPositionUpdateCallback;
+
   // ----------------------------------------------------------------
   // CONSTRUCTOR & SOCKET INITIALIZATION
   // ----------------------------------------------------------------
   GameService() {
     socket = IO.io(
-      // 'http://192.168.0.53:3000', // wifi
-      'http://192.168.1.168:3000', // 5G
+      'http://192.168.1.168:3000', // ou votre URL
       IO.OptionBuilder()
           .setTransports(['websocket'])
           .disableAutoConnect()
@@ -39,7 +41,7 @@ class GameService {
   }
 
   void joinRoom(String gameId) {
-    print("GameService: Joining room with gameId: $gameId via Socket.IO");
+    print("GameService: Joining room with gameId: $gameId");
     socket.emit('joinRoom', gameId);
   }
 
@@ -52,7 +54,7 @@ class GameService {
   // LOBBY / READY STATUS
   // ----------------------------------------------------------------
   void setReadyStatus(String gameId, String playerName, bool isReady) {
-    print("GameService: Updating ready status for $playerName in room $gameId: $isReady");
+    print("GameService: Updating ready status for $playerName in game $gameId: $isReady");
     socket.emit('playerReady', {
       'gameId': gameId,
       'playerName': playerName,
@@ -69,11 +71,9 @@ class GameService {
     });
   }
 
-
   // ----------------------------------------------------------------
   // GAME START / END
   // ----------------------------------------------------------------
-  
   void finishTutorial(String gameId, String playerId) {
     print("GameService: Player $playerId finished tutorial in game $gameId");
     socket.emit('finishTutorial', {
@@ -81,9 +81,9 @@ class GameService {
       'playerId': playerId,
     });
   }
-  
+
   void startGame(String gameId) {
-    print("GameService: Requesting to start game for room $gameId");
+    print("GameService: Requesting to start game for $gameId");
     socket.emit('startGame', {'gameId': gameId});
   }
 
@@ -96,12 +96,20 @@ class GameService {
 
   void endTurn(String gameId) {
     print("GameService: Ending turn for game $gameId");
-    socket.emit('endTurn', gameId); 
+    socket.emit('endTurn', gameId);
   }
 
   // ----------------------------------------------------------------
   // TURN & ACTIVE PLAYER
   // ----------------------------------------------------------------
+  void playerDrawCard(String gameId, String playerId) {
+    print("GameService: Player $playerId requests to draw a card in game $gameId");
+    socket.emit('playerDrawCard', {
+      'gameId': gameId,
+      'playerId': playerId,
+    });
+  }
+
   void onTurnStarted(Function(Map<String, dynamic>) callback) {
     socket.on('turnStarted', (data) {
       print("GameService: Turn started event received");
@@ -111,7 +119,7 @@ class GameService {
 
   void onTurnStateChanged(Function(Map<String, dynamic>) callback) {
     socket.on('turnStateChanged', (data) {
-      print("GameService: Turn state changed.");
+      print("GameService: Turn state changed => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
@@ -122,7 +130,6 @@ class GameService {
       callback(Map<String, dynamic>.from(data));
     });
   }
-  
 
   void getActivePlayer(String gameId) {
     print("GameService: Requesting active player for game $gameId...");
@@ -142,7 +149,7 @@ class GameService {
   // ----------------------------------------------------------------
   void onCurrentPlayers(Function(List<dynamic>) callback) {
     socket.on('currentPlayers', (data) {
-      print("GameService: Current players received.");
+      print("GameService: Current players received => $data");
       callback(List<dynamic>.from(data));
     });
   }
@@ -151,15 +158,13 @@ class GameService {
     socket.on('gameInfos', (data) {
       if (data.containsKey('players')) {
         print("GameService: Received gameInfos (Players count: ${data['players'].length})");
-        // Ne plus logguer avatarBase64
-        data['players'].forEach((p) {
+        for (var p in data['players']) {
           print(" - ${p['playerName']}, berries=${p['berries']}");
-        });
+        }
       }
       callback(Map<String, dynamic>.from(data));
     });
   }
-
 
   // ----------------------------------------------------------------
   // MOVEMENT
@@ -173,17 +178,30 @@ class GameService {
     });
   }
 
+  /// Abonnement à "positionUpdate"
   void onPositionUpdate(Function(Map<String, dynamic>) callback) {
+    _onPositionUpdateCallback = callback;
     socket.on('positionUpdate', (data) {
-      print("GameService: Received position update: $data");
-      _logPlayerPosition(data);
-      callback(Map<String, dynamic>.from(data));
+      final parsed = Map<String, dynamic>.from(data);
+      print("GameService: *** positionUpdate *** => $parsed");
+      // log position A1..P20
+      if (parsed['position'] != null && parsed['position'] is Map) {
+        int px = parsed['position']['x'] ?? 0;
+        final py = parsed['position']['y'] ?? 0;
+        final colLetter = String.fromCharCode(65 + px);
+        final rowNumber = py + 1;
+        print(" -> position: ${colLetter}${rowNumber}, orientation=${parsed['orientation']}");
+      }
+      print(" -> localMapSnippet = ${parsed['localMapSnippet']}");
+      if (_onPositionUpdateCallback != null) {
+        _onPositionUpdateCallback!(parsed);
+      }
     });
   }
 
   void onMoveError(Function(String) callback) {
     socket.on('moveError', (data) {
-      print("GameService: Move error received: $data");
+      print("GameService: Move error => $data");
       callback(data['message']);
     });
   }
@@ -192,26 +210,27 @@ class GameService {
   // VALID MOVES
   // ----------------------------------------------------------------
   void getValidMoves(String gameId, String playerId, Function(Map<String, bool>) callback) {
-    print("GameService: Requesting valid moves for player $playerId in game $gameId");
+    print("GameService: Requesting valid moves for $playerId in $gameId");
     socket.emit('getValidMoves', {'gameId': gameId, 'playerId': playerId});
     socket.once('validMoves', (data) {
       if (data != null && data is Map) {
-        print("GameService: Received valid moves: $data");
+        print("GameService: Received valid moves => $data");
         callback(Map<String, bool>.from(data));
       } else {
         print("GameService: Error getting valid moves");
         callback({
           'canMoveForward': false,
           'canMoveLeft': false,
-          'canMoveRight': false
+          'canMoveRight': false,
         });
       }
     });
   }
 
+  /// Si vous l'utilisez : abonner à l'event 'validMoves'
   void onValidMovesReceived(Function(Map<String, bool>) callback) {
     socket.on('validMoves', (data) {
-      print("GameService: Valid moves received: $data");
+      print("GameService: validMoves => $data");
       callback({
         'canMoveForward': data['canMoveForward'] ?? false,
         'canMoveLeft': data['canMoveLeft'] ?? false,
@@ -223,18 +242,19 @@ class GameService {
   // ----------------------------------------------------------------
   // CARD DRAW
   // ----------------------------------------------------------------
+  /// Si vous l'utilisez pour un event "cardDrawn"
   void onCardDrawn(Function(Map<String, dynamic>) callback) {
     socket.on('cardDrawn', (data) {
-      print("DEBUG front: cardDrawn => $data");      
+      print("GameService: cardDrawn => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   // ----------------------------------------------------------------
-  // CHALLENGE METHODS
+  // CHALLENGE (BETS)
   // ----------------------------------------------------------------
   void startBetting(String gameId, String playerId) {
-    print("GameService: Player $playerId is starting betting in game $gameId");
+    print("GameService: startBetting => $playerId in $gameId");
     socket.emit('startBetting', {
       'gameId': gameId,
       'playerId': playerId,
@@ -249,7 +269,7 @@ class GameService {
   }
 
   void placeBet(String gameId, String playerId, String bet) {
-    print("GameService: Player $playerId placing bet $bet in game $gameId");
+    print("GameService: placeBet => $bet by $playerId in $gameId");
     socket.emit('placeBet', {
       'gameId': gameId,
       'playerId': playerId,
@@ -259,27 +279,27 @@ class GameService {
 
   void onBetPlaced(Function(Map<String, dynamic>) callback) {
     socket.on('betPlaced', (data) {
-      print("GameService: Bet placed event received: $data");
+      print("GameService: betPlaced => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void onChallengeStarted(Function() callback) {
     socket.on('challengeStarted', (_) {
-      print("GameService: Challenge started");
+      print("GameService: challengeStarted");
       callback();
     });
   }
 
   void onChallengeResult(Function(Map<String, dynamic>) callback) {
     socket.on('challengeResult', (data) {
-      print("GameService: Challenge result received: $data");
+      print("GameService: challengeResult => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void startChallenge(String gameId, String playerId) {
-    print("GameService: Player $playerId starting challenge in game $gameId");
+    print("GameService: startChallenge => $playerId in $gameId");
     socket.emit('startChallenge', {
       'gameId': gameId,
       'playerId': playerId,
@@ -287,7 +307,7 @@ class GameService {
   }
 
   void sendChallengeResult(String gameId, String playerId, String result) {
-    print("GameService: Sending challenge result $result for player $playerId in game $gameId");
+    print("GameService: sendChallengeResult => $result");
     socket.emit('challengeResult', {
       'gameId': gameId,
       'playerId': playerId,
@@ -296,7 +316,7 @@ class GameService {
   }
 
   void placeChallengeVote(String gameId, String playerId, String vote) {
-    print("GameService: Player $playerId voting $vote in challenge for game $gameId");
+    print("GameService: placeChallengeVote => $vote by $playerId in $gameId");
     socket.emit('placeChallengeVote', {
       'gameId': gameId,
       'playerId': playerId,
@@ -306,19 +326,19 @@ class GameService {
 
   void onChallengeVotesUpdated(Function(Map<String, dynamic>) callback) {
     socket.on('challengeVotesUpdated', (data) {
-      print("GameService: Challenge votes updated: $data");
+      print("GameService: challengeVotesUpdated => $data");
       if (data['isMajorityReached'] == true) {
         majorityVote = data['majorityVote'];
       }
-      callback(data);
+      callback(Map<String, dynamic>.from(data));
     });
   }
 
   // ----------------------------------------------------------------
-  // QUIZ METHODS (NEW)
+  // QUIZ
   // ----------------------------------------------------------------
   void startQuiz(String gameId, String playerId, String chosenTheme) {
-    print("GameService: Player $playerId starts quiz with theme=$chosenTheme in game $gameId");
+    print("GameService: startQuiz => theme=$chosenTheme");
     socket.emit('startQuiz', {
       'gameId': gameId,
       'playerId': playerId,
@@ -327,7 +347,7 @@ class GameService {
   }
 
   void quizAnswer(String gameId, String playerId, String answer) {
-    print("GameService: Player $playerId sends quizAnswer=$answer in game $gameId");
+    print("GameService: quizAnswer => $answer by $playerId");
     socket.emit('quizAnswer', {
       'gameId': gameId,
       'playerId': playerId,
@@ -337,33 +357,37 @@ class GameService {
 
   void onQuizStarted(Function(Map<String, dynamic>) callback) {
     socket.on('quizStarted', (data) {
+      print("GameService: quizStarted => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void onQuizQuestion(Function(Map<String, dynamic>) callback) {
     socket.on('quizQuestion', (data) {
+      print("GameService: quizQuestion => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void onQuizAnswerResult(Function(Map<String, dynamic>) callback) {
     socket.on('quizAnswerResult', (data) {
+      print("GameService: quizAnswerResult => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void onQuizEnd(Function(Map<String, dynamic>) callback) {
     socket.on('quizEnd', (data) {
+      print("GameService: quizEnd => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   // ----------------------------------------------------------------
-  // OBJECT INVENTORY SYSTEM
+  // INVENTORY
   // ----------------------------------------------------------------
   void pickUpObject(String gameId, String playerId) {
-    print("GameService: Player $playerId picks up an object in game $gameId.");
+    print("GameService: pickUpObject => $playerId in $gameId");
     socket.emit('pickUpObject', {
       'gameId': gameId,
       'playerId': playerId,
@@ -372,13 +396,13 @@ class GameService {
 
   void onObjectPickedUp(Function(Map<String, dynamic>) callback) {
     socket.on('objectPickedUp', (data) {
-      print("GameService: Object added to inventory -> ${data['objectName']}");
+      print("GameService: objectPickedUp => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void discardObject(String gameId, String playerId, int itemId) {
-    print("GameService: Player $playerId discards item $itemId in game $gameId.");
+    print("GameService: discardObject => itemId=$itemId by $playerId");
     socket.emit('discardObject', {
       'gameId': gameId,
       'playerId': playerId,
@@ -388,13 +412,13 @@ class GameService {
 
   void onObjectDiscarded(Function(Map<String, dynamic>) callback) {
     socket.on('objectDiscarded', (data) {
-      print("GameService: Object removed from inventory -> ${data['objectName']}");
+      print("GameService: objectDiscarded => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
 
   void useObject(String gameId, String playerId, int itemId) {
-    print("GameService: Player $playerId uses item $itemId in game $gameId.");
+    print("GameService: useObject => itemId=$itemId by $playerId");
     socket.emit('useObject', {
       'gameId': gameId,
       'playerId': playerId,
@@ -404,19 +428,18 @@ class GameService {
 
   void onObjectUsed(Function(Map<String, dynamic>) callback) {
     socket.on('objectUsed', (data) {
-      print("GameService: Object used => $data");
+      print("GameService: objectUsed => $data");
       callback(Map<String, dynamic>.from(data));
     });
   }
-
 
   // ----------------------------------------------------------------
   // UTILITIES
   // ----------------------------------------------------------------
   Future<String?> getPlayerId(String gameId, String playerName) async {
-    final Completer<String?> completer = Completer();
-
+    final completer = Completer<String?>();
     socket.emit('getPlayerId', {'gameId': gameId, 'playerName': playerName});
+
     socket.once('playerId', (data) {
       if (data != null && data['playerId'] != null) {
         completer.complete(data['playerId']);
@@ -430,12 +453,12 @@ class GameService {
 
   void _logPlayerPosition(Map<String, dynamic> data) {
     if (data.containsKey('position') && data['position'] is Map) {
-      final position = data['position'];
-      final x = position['x'] ?? 0;
-      final y = position['y'] ?? 0;
-      final alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      final formattedPosition = "${alphabet[x]}${y + 1}";
-      print("GameService: Player's current position: $formattedPosition");
+      final pos = data['position'];
+      int x = pos['x'] ?? 0;
+      final y = pos['y'] ?? 0;
+      final col = String.fromCharCode(65 + x);
+      final row = y + 1;
+      print("GameService: Player's current position: $col$row");
     }
   }
 }

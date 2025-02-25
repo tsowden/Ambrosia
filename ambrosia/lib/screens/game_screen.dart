@@ -47,6 +47,10 @@ class GameScreen extends StatelessWidget {
 
   // Mouvements possibles
   final Map<String, bool> validMoves;
+  final int playerX;
+  final int playerY;
+  final String playerOrientation;
+  final Map<String, int> localMapSnippet;
 
   const GameScreen({
     Key? key,
@@ -80,7 +84,12 @@ class GameScreen extends StatelessWidget {
     required this.quizCorrectAnswers,
     required this.quizTotalQuestions,
     required this.quizEarnedBerries,
-    required this.validMoves,
+    required this.validMoves, 
+    required this.playerX, 
+    required this.playerY, 
+    required this.playerOrientation,
+    required this.localMapSnippet,
+
   }) : super(key: key);
 
   @override
@@ -151,7 +160,7 @@ class GameScreen extends StatelessWidget {
             height: circleSize,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.darkerGreen,
+              color: AppTheme.textBlue,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -199,7 +208,7 @@ class GameScreen extends StatelessWidget {
       avatarWidget = Icon(
         Icons.person,
         size: circleSize * 0.5,
-        color: AppTheme.darkerGreen,
+        color: AppTheme.textBlue,
       );
     }
 
@@ -662,14 +671,20 @@ class GameScreen extends StatelessWidget {
   // ----------------------------------------------------------------
   Widget _buildMovementControls() {
     if (!isPlayerActive) return const SizedBox();
+
     return Column(
       children: [
+        // 1) On affiche le T inversé
+        _buildTShapedUI(size: 32),   // ou la taille de votre choix
+        const SizedBox(height: 16),
+
+        // 2) Puis on affiche les boutons
         if (validMoves['canMoveForward'] == true)
           AppTheme.customButton(
             label: 'Move forward',
-            onPressed: () =>
-                gameService.movePlayer(gameId, playerId, 'forward'),
+            onPressed: () => gameService.movePlayer(gameId, playerId, 'forward'),
           ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -678,8 +693,7 @@ class GameScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: AppTheme.customButton(
                   label: 'Left',
-                  onPressed: () =>
-                      gameService.movePlayer(gameId, playerId, 'left'),
+                  onPressed: () => gameService.movePlayer(gameId, playerId, 'left'),
                 ),
               ),
             if (validMoves['canMoveRight'] == true)
@@ -687,13 +701,60 @@ class GameScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 child: AppTheme.customButton(
                   label: 'Right',
-                  onPressed: () =>
-                      gameService.movePlayer(gameId, playerId, 'right'),
+                  onPressed: () => gameService.movePlayer(gameId, playerId, 'right'),
                 ),
               ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildTShapedUI({ double size = 32 }) {
+    final meVal   = localMapSnippet['me']   ?? -1;
+    final f1Val  = localMapSnippet['f1']   ?? -1;
+    final f2Val  = localMapSnippet['f2']   ?? -1;
+    final leftVal = localMapSnippet['left'] ?? -1;
+    final rightVal= localMapSnippet['right']?? -1;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildSquare(f2Val, size),
+        _buildSquare(f1Val, size),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSquare(leftVal, size),
+            _buildSquare(meVal, size),
+            _buildSquare(rightVal, size),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildSquare(int cellValue, double size) {
+    Color color;
+    if (cellValue == -1) {
+      // hors map
+      color = Colors.grey.withOpacity(0.3);
+    } else if (cellValue == 0) {
+      // accessible
+      color = Colors.white;
+    } else {
+      // cellValue == 1 => bloc
+      color = Colors.blueGrey.shade700;
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(width: 1, color: Colors.black),
+      ),
     );
   }
 
@@ -709,7 +770,7 @@ class GameScreen extends StatelessWidget {
             cardName!,
             style: const TextStyle(
               fontSize: 24,
-              color: AppTheme.greenButton,
+              color: AppTheme.buttonBlue,
               fontWeight: FontWeight.bold,
               fontFamily: 'Nunito',
             ),
@@ -722,7 +783,7 @@ class GameScreen extends StatelessWidget {
               cardDescription!,
               style: const TextStyle(
                 fontSize: 18,
-                color: AppTheme.greenButton,
+                color: AppTheme.buttonBlue,
                 fontFamily: 'Nunito',
               ),
               textAlign: TextAlign.center,
@@ -908,7 +969,7 @@ class _ActiveQuizQuestionWidgetState extends State<_ActiveQuizQuestionWidget> {
 
   Widget _buildAnswerButton(String option) {
     // Couleur par défaut
-    Color btnColor = AppTheme.greenButton;
+    Color btnColor = AppTheme.buttonBlue;
 
     // Si une réponse a été donnée (manuelle ou timeout) et qu'on sait si c'est correct
     if (_hasAnswered && widget.correctAnswer != null) {
