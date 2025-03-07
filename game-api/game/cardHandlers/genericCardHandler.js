@@ -31,7 +31,7 @@ class GenericCardHandler {
         : 'Aucune description passive.';
 
       // 4) Gérer les options de pari (si pertinent)
-      const betOptions = card.card_bet ? card.card_bet.split(';') : [];
+      const betOptions = card.card_choice ? card.card_choice.split(';') : [];
       const rewardOptions = card.card_reward ? card.card_reward.split(';') : [];
 
       // 5) Stocker la carte courante dans Redis
@@ -46,7 +46,7 @@ class GenericCardHandler {
       // 6) Notifier tous les joueurs (émission “cardDrawn”)
       console.log('DEBUG - Emitting cardDrawn with:', {
         cardCategory: card.card_category,
-        cardTheme: card.card_theme,
+        cardTheme: card.card_choice,
       });
       this.io.to(this.gameId).emit('cardDrawn', {
         activePlayerName: activePlayer.playerName,
@@ -54,8 +54,8 @@ class GenericCardHandler {
         cardDescriptionPassive: cardDescriptionPassive,
         cardName: card.card_name || 'Carte inconnue',
         cardImage: card.card_image || null,
-        cardTheme: card.card_theme || '',
-
+        cardTheme: card.card_choice || '',
+        cardSubheading: card.card_subheading || '', 
         cardCategory: card.card_category || 'Catégorie inconnue',
         turnState: 'cardDrawn',
         betOptions: betOptions || null,

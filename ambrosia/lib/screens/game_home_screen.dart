@@ -1,5 +1,4 @@
 // lib/screens/game_home_screen.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -33,7 +32,7 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
   // Bottom navigation index (Game, Inventory, Quest, Quit)
   int _currentIndex = 0;
 
-  // Etat du tour et du joueur
+  // État du tour et du joueur
   String _turnState = 'movement';
   bool _isPlayerActive = false;
 
@@ -52,22 +51,20 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
   String? _cardImage;
   String? _cardDescription;
   String? _cardCategory;
+  String? _cardSubheading;
   List<String> _betOptions = [];
   String? _majorityVote;
 
   // Quiz
   bool _isQuizInProgress = false;
   List<String> _quizThemes = [];
-  int? _quizCurrentIndex;
-  String? _quizCurrentDescription;
-  String? _quizCurrentCategory;
-  String? _quizCurrentImage;
-  List<dynamic> _quizCurrentOptions = [];
+  // Les autres informations du quiz sont gérées en interne dans GameScreen
   bool? _quizWasAnswerCorrect;
   String? _quizCorrectAnswer;
   int _quizCorrectAnswers = 0;
   int _quizTotalQuestions = 0;
   int _quizEarnedBerries = 0;
+  int? _quizCurrentDifficulty; // Variable locale pour la difficulté (1, 2 ou 3)
 
   // Mouvements possibles (fourni par le back)
   Map<String, bool> _validMoves = {
@@ -97,7 +94,6 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
   @override
   void initState() {
     super.initState();
-
     _setupSocketListeners();
     _handleInitialData(widget.initialData);
 
@@ -135,21 +131,17 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
       _cardImage = null;
       _cardDescription = null;
       _cardCategory = null;
+      _cardSubheading = null;
       _betOptions = [];
       _majorityVote = null;
       _isQuizInProgress = false;
       _quizThemes = [];
-      _quizCurrentIndex = null;
-      _quizCurrentDescription = null;
-      _quizCurrentCategory = null;
-      _quizCurrentImage = null;
-      _quizCurrentOptions = [];
       _quizWasAnswerCorrect = null;
       _quizCorrectAnswer = null;
       _quizCorrectAnswers = 0;
       _quizTotalQuestions = 0;
       _quizEarnedBerries = 0;
-      // On réinitialise le lock
+      _quizCurrentDifficulty = null;
       _moveLocked = false;
     });
 
@@ -159,7 +151,6 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
           _validMoves = moves;
         });
       });
-      // On verrouille les déplacements pendant 3 secondes
       _setMoveLockFor(const Duration(seconds: 3));
     }
   }
@@ -249,7 +240,6 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         if (data['orientation'] != null) {
           _playerOrientation = data['orientation'];
         }
-        // Le déverrouillage est géré par le Timer de _setMoveLockFor
       });
     });
 
@@ -262,14 +252,13 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
     gs.onCardDrawn((data) {
       setState(() {
         _activePlayerName = data['activePlayerName'];
-        _isPlayerActive =
-            (_activePlayerName?.trim().toLowerCase() == widget.playerName.trim().toLowerCase());
+        _isPlayerActive = (_activePlayerName?.trim().toLowerCase() ==
+            widget.playerName.trim().toLowerCase());
         _cardName = data['cardName'];
         _cardImage = data['cardImage'];
         _cardCategory = data['cardCategory'];
-        _cardDescription = _isPlayerActive
-            ? data['cardDescription']
-            : data['cardDescriptionPassive'];
+        _cardDescription = _isPlayerActive ? data['cardDescription'] : data['cardDescriptionPassive'];
+        _cardSubheading = data['cardSubheading'];
         _turnState = data['turnState'] ?? _turnState;
         final rawBetOptions = data['betOptions'];
         if (rawBetOptions is List) {
@@ -336,8 +325,7 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
         if (data['rewards'] != null) {
           final rewards = data['rewards'] as List<dynamic>;
           final me = rewards.firstWhere(
-              (r) => r['playerName'] == widget.playerName,
-              orElse: () => null);
+              (r) => r['playerName'] == widget.playerName, orElse: () => null);
           if (me != null && me['berries'] != null) {
             _myBerries = me['berries'];
           }
@@ -357,24 +345,12 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
       setState(() {
         _isQuizInProgress = true;
         _turnState = 'quizInProgress';
-        _quizCurrentIndex = null;
-        _quizCurrentDescription = null;
-        _quizCurrentOptions = [];
-        _quizWasAnswerCorrect = null;
-        _quizCorrectAnswer = null;
-        _quizCurrentCategory = null;
-        _quizCurrentImage = null;
+        // Les informations internes au quiz seront gérées dans GameScreen
       });
     });
     gs.onQuizQuestion((data) {
       setState(() {
-        _quizCurrentIndex = data['questionIndex'];
-        _quizCurrentDescription = data['questionDescription'];
-        _quizCurrentOptions = data['questionOptions'] ?? [];
-        _quizWasAnswerCorrect = null;
-        _quizCorrectAnswer = null;
-        _quizCurrentCategory = data['questionCategory'];
-        _quizCurrentImage = data['questionImage'];
+        // Les informations de question sont gérées dans GameScreen
       });
     });
     gs.onQuizAnswerResult((data) {
@@ -445,10 +421,8 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
       }
       return const SizedBox();
     });
-
   }
 
-  // Ajout d'une commande de téléportation pour tests
   void _showTeleportDialog() {
     final TextEditingController _controller = TextEditingController();
     showDialog(
@@ -538,15 +512,11 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
             cardImage: _cardImage,
             cardDescription: _cardDescription,
             cardCategory: _cardCategory,
+            cardSubheading: _cardSubheading,
             betOptions: _betOptions,
             majorityVote: _majorityVote,
             isQuizInProgress: _isQuizInProgress,
             quizThemes: _quizThemes,
-            quizCurrentIndex: _quizCurrentIndex,
-            quizCurrentDescription: _quizCurrentDescription,
-            quizCurrentCategory: _quizCurrentCategory,
-            quizCurrentImage: _quizCurrentImage,
-            quizCurrentOptions: _quizCurrentOptions,
             quizWasAnswerCorrect: _quizWasAnswerCorrect,
             quizCorrectAnswer: _quizCorrectAnswer,
             quizCorrectAnswers: _quizCorrectAnswers,
@@ -557,6 +527,7 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
             playerY: _playerY,
             playerOrientation: _playerOrientation,
             fullMapObjects: _fullMapObjects,
+            quizCurrentDifficulty: _quizCurrentDifficulty,
           ),
           if (_currentIndex == 1)
             InventoryScreen(
@@ -581,15 +552,11 @@ class _GameHomeScreenState extends State<GameHomeScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showTeleportDialog,
-        child: const Icon(Icons.send),
-      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onNavItemTapped,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: AppTheme.buttonBlue,
+        backgroundColor: AppTheme.primaryColor,
         selectedItemColor: AppTheme.white,
         unselectedItemColor: AppTheme.white.withOpacity(0.5),
         items: const [

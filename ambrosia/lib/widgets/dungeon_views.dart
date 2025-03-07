@@ -1,6 +1,7 @@
 // lib/widgets/dungeon_view.dart
 
 import 'dart:math';
+import 'package:ambrosia/styles/app_theme.dart';
 import 'package:flutter/material.dart';
 
 /// Représente la cellule calculée
@@ -149,12 +150,12 @@ class Dungeon7x7 extends StatelessWidget {
                 angle: _rotationAngleForOrientation(playerOrientation),
                 child: Icon(
                   Icons.navigation, // flèche du joueur
-                  color: Colors.white.withOpacity(cell.fadeFactor),
+                  color: AppTheme.boldRed.withOpacity(cell.fadeFactor),
                   size: cellSize * 0.6,
                 ),
               ),
             ),
-          if (cell.isEdge && !cell.isPlayer)
+          if (cell.isEdge && !cell.isPlayer && cell.accessible)
             Positioned(
               right: 2,
               bottom: 2,
@@ -201,8 +202,8 @@ class Dungeon7x7 extends StatelessWidget {
     }
     return Icon(
       icon,
-      color: Colors.white.withOpacity(fade),
-      size: cellSize * 0.4,
+      color: Colors.white.withOpacity(1.0),
+      size: cellSize * 0.6,
     );
   }
 }

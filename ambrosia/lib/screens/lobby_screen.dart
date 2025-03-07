@@ -254,7 +254,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     fontSize: 20,
                     fontWeight: FontWeight.w100,
                     fontFamily: 'PermanentMarker',
-                    color: AppTheme.titleYellow, // Jaune
+                    color: AppTheme.accentYellow, // Jaune
                   ),
                 ),
                 // Code de la partie (valeur)
@@ -263,7 +263,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.titleYellow, // Jaune
+                    color: AppTheme.accentYellow, // Jaune
                     fontFamily: 'Nunito',
                   ),
                 ),
@@ -278,7 +278,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppTheme.white,
-                      border: Border.all(color: AppTheme.buttonBlue, width: 2),
+                      border: Border.all(color: AppTheme.primaryColor, width: 2),
                       image: _playerImage != null
                           ? DecorationImage(
                               image: FileImage(_playerImage!),
@@ -304,7 +304,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.buttonBlue,
+                      color: AppTheme.primaryColor,
                       fontFamily: 'Nunito',
                     ),
                   ),
@@ -326,7 +326,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: AppTheme.white.withOpacity(0.8),
-                      border: Border.all(color: AppTheme.buttonBlue, width: 2),
+                      border: Border.all(color: AppTheme.primaryColor, width: 2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     padding: const EdgeInsets.all(8.0),
@@ -367,7 +367,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                   child: ElevatedButton(
                     onPressed: () => _toggleReadyStatus(!isReady),
                     style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.all(AppTheme.buttonBlue),
+                      backgroundColor: MaterialStateProperty.all(AppTheme.primaryColor),
                       foregroundColor: MaterialStateProperty.all(AppTheme.white),
                       textStyle: MaterialStateProperty.all(
                         const TextStyle(
@@ -428,7 +428,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
     return Icon(
       Icons.camera_alt_outlined,
       size: screenHeight * 0.07,
-      color: AppTheme.buttonBlue,
+      color: AppTheme.primaryColor,
     );
   }
 }

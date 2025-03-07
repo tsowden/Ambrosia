@@ -290,10 +290,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: AppTheme.buttonBlue),
+                leading: const Icon(Icons.camera_alt, color: AppTheme.primaryColor),
                 title: Text(
                   'Prendre une photo',
-                  style: AppTheme.nunitoTextStyle(color: AppTheme.buttonBlue),
+                  style: AppTheme.nunitoTextStyle(color: AppTheme.primaryColor),
                 ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -301,10 +301,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: AppTheme.buttonBlue),
+                leading: const Icon(Icons.photo_library, color: AppTheme.primaryColor),
                 title: Text(
                   'Choisir depuis la galerie',
-                  style: AppTheme.nunitoTextStyle(color: AppTheme.buttonBlue),
+                  style: AppTheme.nunitoTextStyle(color: AppTheme.primaryColor),
                 ),
                 onTap: () async {
                   Navigator.of(ctx).pop();
@@ -355,7 +355,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
           'Aucun profil',
           style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
             fontSize: 36,
-            color: AppTheme.titleYellow,
+            color: AppTheme.accentYellow,
             fontWeight: FontWeight.w100
           ),
           textAlign: TextAlign.center,
@@ -375,8 +375,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
             textAlign: TextAlign.center,
             text: TextSpan(
               style: AppTheme.themeData.textTheme.bodyMedium?.copyWith(
-                fontSize: 20,
-                color: AppTheme.buttonBlue,
+                fontSize: 19,
+                color: AppTheme.textBlue,
               ),
               children: [
                 const TextSpan(text: "Vous n'êtes pas connecté.\n\n"),
@@ -387,7 +387,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 const TextSpan(
                   text:
                       "\n\nAvoir son propre profil permet cependant de collectionner "
-                      "les cartes de la forêt et de retrouver chaque personnage rencontré précédemment "
+                      "les cartes du labyrinthe et de retrouver chaque personnage rencontré précédemment "
                       "à tout moment dans l'onglet collection.",
                 ),
               ],
@@ -443,7 +443,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               decoration: TextDecoration.underline,
               fontStyle: FontStyle.italic,
               fontSize: 18,
-              color: AppTheme.subtitleWhite,
+              color: AppTheme.textBlue,
             ),
           ),
         ),
@@ -466,7 +466,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
           'Mon profil',
           style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
             fontSize: 36,
-            color: AppTheme.titleYellow,
+            color: AppTheme.accentYellow,
             fontWeight: FontWeight.w100
           ),
           textAlign: TextAlign.center,
@@ -481,7 +481,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             children: [
               CircleAvatar(
                 radius: 80,
-                backgroundColor: AppTheme.buttonBlue,
+                backgroundColor: AppTheme.primaryColor,
                 backgroundImage: avatarBase64.isNotEmpty
                     ? MemoryImage(base64Decode(avatarBase64))
                     : null,
@@ -547,7 +547,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
-                color: AppTheme.buttonBlue,
+                color: AppTheme.primaryColor,
                 tooltip: "Modifier le pseudo",
                 onPressed: _showEditPseudoDialog,
               ),
@@ -565,7 +565,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             text: TextSpan(
               style: AppTheme.themeData.textTheme.bodyMedium?.copyWith(
                 fontSize: 20,
-                color: AppTheme.buttonBlue,
+                color: AppTheme.primaryColor,
               ),
               children: const [
                 TextSpan(
@@ -576,7 +576,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 TextSpan(
                   text:
                       "Certains personnages sont plus rares à croiser que d'autres. "
-                      "Parviendrez-vous à découvrir l'entièreté de la forêt et lever le voile "
+                      "Parviendrez-vous à découvrir l'entièreté du labyrinthe de brume et lever le voile "
                       "sur ses mystères au fil des parties ?",
                 ),
               ],

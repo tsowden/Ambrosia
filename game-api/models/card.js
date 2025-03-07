@@ -16,7 +16,7 @@ const db = require('../config/db');
 //   }
 // }
 
-const DEBUG_CARD_IDS = [2, 3, 4, 10, 11, 12]; // IDs pour le debug, par exemple
+const DEBUG_CARD_IDS = [1]; // IDs pour le debug, par exemple
 
 async function getRandomCard() {
   try {

@@ -308,16 +308,17 @@ const handleSocketEvents = (io, socket) => {
   // -----------------------------------------------------
   // QUIZ
   // -----------------------------------------------------
-  socket.on('startQuiz', async ({ gameId, playerId, chosenTheme }) => {
-    console.log(`[startQuiz] => game=${gameId}, player=${playerId}, theme=${chosenTheme}`);
+  socket.on('startQuiz', async ({ gameId, playerId, chosenTheme, chosenDifficulty }) => {
+    console.log(`[startQuiz] => game=${gameId}, player=${playerId}, theme=${chosenTheme}, difficulty=${chosenDifficulty}`);
     try {
       const handler = getCardHandlerForCategory(gameId, io, 'Quiz');
-      await handler.startQuiz(playerId, chosenTheme);
+      await handler.startQuiz(playerId, chosenTheme, chosenDifficulty);
       await broadcastGameInfos(gameId);
     } catch (error) {
       console.error('[startQuiz] error =>', error);
     }
   });
+  
 
   socket.on('quizAnswer', async ({ gameId, playerId, answer }) => {
     console.log(`[quizAnswer] => game=${gameId}, player=${playerId}, answer=${answer}`);

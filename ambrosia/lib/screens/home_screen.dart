@@ -307,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Size.fromHeight(56), // plus haut
                           ),
                           backgroundColor: MaterialStateProperty.all(
-                              AppTheme.buttonBlue),
+                              AppTheme.primaryColor),
                           foregroundColor:
                               MaterialStateProperty.all(AppTheme.white),
                           textStyle: MaterialStateProperty.all(
@@ -347,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Size.fromHeight(56),
                           ),
                           backgroundColor: MaterialStateProperty.all(
-                              AppTheme.buttonBlue),
+                              AppTheme.primaryColor),
                           foregroundColor:
                               MaterialStateProperty.all(AppTheme.white),
                           textStyle: MaterialStateProperty.all(
@@ -380,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             const Size.fromHeight(56),
                           ),
                           backgroundColor: MaterialStateProperty.all(
-                              AppTheme.buttonBlue),
+                              AppTheme.primaryColor),
                           foregroundColor:
                               MaterialStateProperty.all(AppTheme.white),
                           textStyle: MaterialStateProperty.all(

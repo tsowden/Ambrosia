@@ -1,51 +1,29 @@
-    // models/quiz.js
-    const db = require('../config/db'); 
+// models/quiz.js
+const db = require('../config/db'); 
 
-    async function getThreeQuestions(category) {
-    const questions = [];
+async function getThreeQuestions(category, difficultyChoice) {
+  let allowedDifficulties = [];
+  if (difficultyChoice === "Débutant") {
+    allowedDifficulties = [1, 2];
+  } else if (difficultyChoice === "Expert") {
+    allowedDifficulties = [2, 3];
+  } else {
+    allowedDifficulties = [1, 2, 3];
+  }
+  // On force la conversion de question_difficulty en entier pour éviter des problèmes de type
+  const placeholders = allowedDifficulties.map(() => '?').join(',');
+  const query = `
+    SELECT * FROM questions
+    WHERE question_category = ?
+    AND CAST(question_difficulty AS UNSIGNED) IN (${placeholders})
+    ORDER BY RAND()
+    LIMIT 3
+  `;
+  const params = [category, ...allowedDifficulties];
+  const [rows] = await db.query(query, params);
+  return rows;
+}
 
-    // 1) difficulty=1
-    const [rows1] = await db.query(
-        `SELECT * FROM questions
-        WHERE question_category = ?
-        AND question_difficulty = 1
-        ORDER BY RAND()
-        LIMIT 1`,
-        [category]
-    );
-    if (rows1 && rows1.length > 0) {
-        questions.push(rows1[0]);
-    }
-
-    // 2) difficulty=2
-    const [rows2] = await db.query(
-        `SELECT * FROM questions
-        WHERE question_category = ?
-        AND question_difficulty = 2
-        ORDER BY RAND()
-        LIMIT 1`,
-        [category]
-    );
-    if (rows2 && rows2.length > 0) {
-        questions.push(rows2[0]);
-    }
-
-    // 3) difficulty=3
-    const [rows3] = await db.query(
-        `SELECT * FROM questions
-        WHERE question_category = ?
-        AND question_difficulty = 3
-        ORDER BY RAND()
-        LIMIT 1`,
-        [category]
-    );
-    if (rows3 && rows3.length > 0) {
-        questions.push(rows3[0]);
-    }
-
-    return questions;
-    }
-
-    module.exports = {
-    getThreeQuestions,
-    };
+module.exports = {
+  getThreeQuestions,
+};

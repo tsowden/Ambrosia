@@ -80,7 +80,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 "Inventory",
                 style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
                   fontSize: 36,
-                  color: AppTheme.buttonBlue,
+                  color: AppTheme.accentYellow,
                 ),
               ),
             ),

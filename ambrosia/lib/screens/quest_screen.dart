@@ -62,7 +62,7 @@ class _QuestScreenState extends State<QuestScreen> {
               'Quests',
               style: AppTheme.themeData.textTheme.displayLarge?.copyWith(
                 fontSize: 36,
-                color: AppTheme.buttonBlue,
+                color: AppTheme.accentYellow,
               ),
               textAlign: TextAlign.center,
             ),
@@ -132,7 +132,7 @@ class _QuestScreenState extends State<QuestScreen> {
     return CheckboxListTile(
       contentPadding: EdgeInsets.zero,
       checkColor: Colors.white,
-      activeColor: AppTheme.buttonBlue,
+      activeColor: AppTheme.primaryColor,
       value: isCompleted,
       onChanged: (val) {
         if (onTap != null) onTap();

@@ -345,14 +345,16 @@ class GameService {
   // ----------------------------------------------------------------
   // QUIZ
   // ----------------------------------------------------------------
-  void startQuiz(String gameId, String playerId, String chosenTheme) {
-    print("GameService: startQuiz => theme=$chosenTheme");
+  void startQuiz(String gameId, String playerId, String chosenTheme, String chosenDifficulty) {
+    print("GameService: startQuiz => theme=$chosenTheme, difficulty=$chosenDifficulty");
     socket.emit('startQuiz', {
       'gameId': gameId,
       'playerId': playerId,
       'chosenTheme': chosenTheme,
+      'chosenDifficulty': chosenDifficulty,
     });
   }
+
 
   void quizAnswer(String gameId, String playerId, String answer) {
     print("GameService: quizAnswer => $answer by $playerId");

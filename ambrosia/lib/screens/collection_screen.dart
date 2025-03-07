@@ -10,7 +10,7 @@ class CollectionScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Collection'),
-        backgroundColor: AppTheme.buttonBlue,
+        backgroundColor: AppTheme.primaryColor,
         // La flèche de retour est gardée pour la navigation mais rendue invisible
         iconTheme: const IconThemeData(color: Colors.transparent),
       ),
@@ -26,12 +26,12 @@ class CollectionScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: ListTile(
-                leading: const Icon(Icons.collections, color: AppTheme.buttonBlue),
+                leading: const Icon(Icons.collections, color: AppTheme.primaryColor),
                 title: Text(
                   'Item ${index + 1}',
                   style: AppTheme.themeData.textTheme.bodyMedium,
                 ),
-                trailing: const Icon(Icons.arrow_forward_ios, color: AppTheme.buttonBlue),
+                trailing: const Icon(Icons.arrow_forward_ios, color: AppTheme.primaryColor),
                 onTap: () {
                   // Action lors du tap sur un item (à personnaliser)
                 },
